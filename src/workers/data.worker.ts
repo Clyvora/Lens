@@ -24,6 +24,7 @@ import type {
 
 let currentJson: JsonValue | undefined;
 let currentCsv: CsvDocument | undefined;
+let jsonTableData = new Map<string, Array<Record<string, JsonValue>>>();
 let jsonSearchIndex: Array<{
   path: string;
   haystack: string;
@@ -37,10 +38,45 @@ const CONVERSION_PREVIEW_LIMIT = 200_000;
 function resetState() {
   currentJson = undefined;
   currentCsv = undefined;
+  jsonTableData = new Map();
   jsonSearchIndex = [];
   csvSearchCache = new Map();
   queryCacheKey = "";
   queryCacheRows = [];
+}
+
+function indexJsonTableSources(value: JsonValue) {
+  const labels = new Map<string, string>();
+  const visit = (node: JsonValue, path: string) => {
+    if (Array.isArray(node)) {
+      if (node.every((item) => item !== null && typeof item === "object" && !Array.isArray(item))) {
+        const rows = node as Array<Record<string, JsonValue>>;
+        const existing = jsonTableData.get(path) ?? [];
+        jsonTableData.set(path, [...existing, ...rows]);
+        labels.set(path, path === "$" ? "Root array" : path);
+        for (const item of rows) {
+          for (const [key, child] of Object.entries(item)) {
+            if (child && typeof child === "object") visit(child, `${path}[].${key}`);
+          }
+        }
+      }
+      return;
+    }
+    if (node && typeof node === "object") {
+      for (const [key, child] of Object.entries(node)) {
+        const nextPath = /^[A-Za-z_$][\w$]*$/.test(key)
+          ? `${path}.${key}`
+          : `${path}[${JSON.stringify(key)}]`;
+        visit(child, nextPath);
+      }
+    }
+  };
+  visit(value, "$");
+  return [...jsonTableData.entries()].map(([id, rows]) => ({
+    id,
+    label: labels.get(id) ?? id,
+    rows: rows.length,
+  }));
 }
 
 function parseDocument(
@@ -59,6 +95,7 @@ function parseDocument(
     if (!parsed.ok) throw new Error(parsed.error.message);
     currentJson = parsed.data;
     jsonSearchIndex = buildJsonSearchIndex(parsed.data);
+    const jsonTableSources = indexJsonTableSources(parsed.data);
     return {
       format: "json",
       json: parsed.data,
@@ -66,6 +103,7 @@ function parseDocument(
       itemCount: getItemCount(parsed.data),
       issues: [],
       jsonInsights: analyzeJson(parsed.data),
+      jsonTableSources,
     };
   }
 
@@ -201,16 +239,29 @@ function convert(request: Extract<WorkerRequest, { type: "convert" }>): Conversi
     const rows = request.exportScope === "filtered"
       ? getCsvRows(request.query, request.column, request.sort)
       : currentCsv.rows;
-    const text = formatJson(csvToJson({ ...currentCsv, rows }));
+    const convertedRows = csvToJson(
+      { ...currentCsv, rows },
+      {
+        inferTypes: request.inferCsvTypes,
+        emptyMode: request.csvEmptyMode,
+      },
+    );
+    const text = formatJson(convertedRows);
     return makeConversionPayload(text, "json", [
         { label: "Rows", value: rows.length.toLocaleString() },
         { label: "Columns", value: currentCsv.columns.length.toLocaleString() },
         { label: "Source", value: request.exportScope === "filtered" ? "Current view" : "Complete file" },
+        { label: "Value types", value: request.inferCsvTypes ? "Numbers and booleans inferred" : "All text" },
+        { label: "Empty cells", value: request.csvEmptyMode === "null" ? "null" : request.csvEmptyMode === "omit" ? "Omitted" : "Empty text" },
       ]);
   }
 
   if (currentJson === undefined) throw new Error("No JSON file is open.");
-  const converted = jsonToCsv(currentJson, {
+  const tableValue = jsonTableData.get(request.jsonTableSource);
+  if (!tableValue) {
+    throw new Error("No table-shaped array was found. Choose a JSON array containing objects before converting to CSV.");
+  }
+  const converted = jsonToCsv(tableValue, {
     delimiter: request.delimiter,
     newline: request.newline,
     nestedMode: request.nestedMode,
@@ -219,11 +270,19 @@ function convert(request: Extract<WorkerRequest, { type: "convert" }>): Conversi
   if (!converted.ok) throw new Error(converted.error.message);
   const parsedOutput = parseCsv(converted.data);
   const columns = parsedOutput.ok ? parsedOutput.data.columns.length : 0;
-  const rows = Array.isArray(currentJson) ? currentJson.length : 0;
+  const rows = parsedOutput.ok ? parsedOutput.data.rows.length : tableValue.length;
   return makeConversionPayload(converted.data, "csv", [
       { label: "Rows", value: rows.toLocaleString() },
       { label: "Columns", value: columns.toLocaleString() },
-      { label: "Nested data", value: request.nestedMode === "flatten" ? "Flattened paths" : "JSON text" },
+      {
+        label: "Nested data",
+        value: request.nestedMode === "expand"
+          ? "Arrays expanded"
+          : request.nestedMode === "flatten"
+            ? "Flattened paths"
+            : "JSON text",
+      },
+      { label: "Table source", value: request.jsonTableSource },
       { label: "Formula safety", value: request.protectFormulas ? "Protected" : "Unchanged" },
     ]);
 }

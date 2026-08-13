@@ -1,6 +1,7 @@
 import type {
   CsvColumnInsight,
   CsvDelimiter,
+  CsvEmptyMode,
   CsvLineEnding,
   JsonInsights,
   JsonValue,
@@ -26,6 +27,7 @@ export interface ParsedDocumentPayload {
     duplicateRows: number;
   };
   jsonInsights?: JsonInsights;
+  jsonTableSources?: Array<{ id: string; label: string; rows: number }>;
 }
 
 export interface CsvQueryPayload {
@@ -70,6 +72,9 @@ export type WorkerRequest =
       newline: CsvLineEnding;
       nestedMode: NestedJsonMode;
       protectFormulas: boolean;
+      jsonTableSource: string;
+      inferCsvTypes: boolean;
+      csvEmptyMode: CsvEmptyMode;
     }
   | { id: number; type: "clear" };
 

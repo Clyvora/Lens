@@ -4,7 +4,7 @@ Clyvora Lens is designed so file contents stay on the device where the app is op
 
 ## What the app processes
 
-When a user opens or pastes JSON, CSV, or text, the browser reads and processes that data locally. Parsing, inspection, search, filtering, sorting, conversion, copying, and download creation happen in the browser. File contents are not sent to Clyvora or any third party by the application.
+When a user opens or pastes JSON or CSV, the browser reads and processes that data locally. Parsing, inspection, search, filtering, sorting, conversion, copying, and download creation happen in the browser. File contents are not sent to Clyvora or any third party by the application.
 
 ## Data collection
 

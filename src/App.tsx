@@ -31,6 +31,7 @@ import { DataWorkerClient } from "./lib/dataWorkerClient";
 import type {
   CsvColumnInsight,
   CsvDelimiter,
+  CsvEmptyMode,
   CsvLineEnding,
   JsonInsights,
   JsonValue,
@@ -62,6 +63,7 @@ interface DocumentState {
     duplicateRows: number;
   };
   jsonInsights?: JsonInsights;
+  jsonTableSources?: Array<{ id: string; label: string; rows: number }>;
 }
 
 const JSON_EXAMPLE = `{
@@ -90,6 +92,8 @@ interface Preferences {
   nestedMode: NestedJsonMode;
   protectFormulas: boolean;
   exportScope: "all" | "filtered";
+  inferCsvTypes: boolean;
+  csvEmptyMode: CsvEmptyMode;
 }
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -100,6 +104,8 @@ const DEFAULT_PREFERENCES: Preferences = {
   nestedMode: "stringify",
   protectFormulas: true,
   exportScope: "all",
+  inferCsvTypes: true,
+  csvEmptyMode: "empty",
 };
 
 let dataWorker = new DataWorkerClient();
@@ -176,6 +182,8 @@ function App() {
   const [processing, setProcessing] = useState("");
   const [dragging, setDragging] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteValue, setPasteValue] = useState("");
   const [preferences, setPreferences] = useState<Preferences>(loadPreferences);
   const [query, setQuery] = useState("");
   const [workerQuery, setWorkerQuery] = useState("");
@@ -202,6 +210,7 @@ function App() {
     "idle",
   );
   const [conversionBusy, setConversionBusy] = useState(false);
+  const [jsonTableSource, setJsonTableSource] = useState("");
 
   const clearSearch = useCallback(() => {
     setQuery("");
@@ -232,12 +241,13 @@ function App() {
 
   const conversionOpen = Boolean(conversion);
   const pendingFileOpen = Boolean(pendingFile);
+  const anyModalOpen = conversionOpen || pendingFileOpen || pasteOpen;
 
   useEffect(() => {
     const onShortcut = (event: globalThis.KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "o") {
         event.preventDefault();
-        if (!conversionOpen && !pendingFileOpen) inputRef.current?.click();
+        if (!anyModalOpen) inputRef.current?.click();
         return;
       }
       if (
@@ -253,8 +263,7 @@ function App() {
       if (
         event.key === "Escape" &&
         query &&
-        !conversionOpen &&
-        !pendingFileOpen
+        !anyModalOpen
       ) {
         clearSearch();
         searchInputRef.current?.focus();
@@ -262,10 +271,10 @@ function App() {
     };
     globalThis.document.addEventListener("keydown", onShortcut);
     return () => globalThis.document.removeEventListener("keydown", onShortcut);
-  }, [clearSearch, conversionOpen, document, pendingFileOpen, query]);
+  }, [anyModalOpen, clearSearch, document, query]);
 
   useEffect(() => {
-    if (!conversionOpen && !pendingFileOpen) return;
+    if (!anyModalOpen) return;
     previousFocusRef.current = globalThis.document
       .activeElement as HTMLElement | null;
     const focusable = () =>
@@ -280,6 +289,7 @@ function App() {
         event.preventDefault();
         closeConversion();
         setPendingFile(null);
+        setPasteOpen(false);
         return;
       }
       if (event.key !== "Tab") return;
@@ -303,7 +313,7 @@ function App() {
       globalThis.document.removeEventListener("keydown", onKeyDown);
       previousFocusRef.current?.focus();
     };
-  }, [closeConversion, conversionOpen, pendingFileOpen]);
+  }, [anyModalOpen, closeConversion]);
 
   const resetInspectionState = () => {
     clearSearch();
@@ -313,6 +323,7 @@ function App() {
     setCopyState("idle");
     setCsvView({ rows: [], total: 0 });
     setJsonSearch({ exactPaths: new Set(), branchPaths: new Set(), matches: 0 });
+    setJsonTableSource("");
   };
 
   const closeDocument = () => {
@@ -355,6 +366,7 @@ function App() {
       }, transfer);
       if (requestId !== loadRequestRef.current) return;
       setDocument({ name, size: sourceBlob.size, sourceBlob, ...payload });
+      setJsonTableSource(payload.jsonTableSources?.[0]?.id ?? "");
       setError("");
     } catch (cause) {
       if (requestId !== loadRequestRef.current) return;
@@ -376,8 +388,8 @@ function App() {
   };
 
   const readFile = async (file: File) => {
-    if (!/\.(json|csv|txt)$/i.test(file.name)) {
-      setError("Unsupported file type. Choose a .json, .csv, or .txt file.");
+    if (!/\.(json|csv)$/i.test(file.name)) {
+      setError("Unsupported file type. Choose a .json or .csv file.");
       return;
     }
     if (file.size > LARGE_FILE_BYTES) {
@@ -413,20 +425,12 @@ function App() {
     if (file) readFile(file);
   };
 
-  const pasteFromClipboard = async () => {
-    setError("");
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text.trim()) {
-        setError("The clipboard does not contain any text to inspect.");
-        return;
-      }
-      await loadContent("clipboard.txt", text);
-    } catch {
-      setError(
-        "Clipboard access was blocked. Allow clipboard permission or choose a file instead.",
-      );
-    }
+  const inspectPastedData = async () => {
+    const trimmed = pasteValue.trim();
+    if (!trimmed) return;
+    const likelyJson = trimmed.startsWith("{") || trimmed.startsWith("[");
+    setPasteOpen(false);
+    await loadContent(`pasted-data.${likelyJson ? "json" : "csv"}`, pasteValue);
   };
 
   useEffect(() => setVisibleCsvRows(CSV_PAGE_SIZE), [
@@ -507,6 +511,7 @@ function App() {
   const itemCount = document?.itemCount ?? 0;
   const csvInsights = document?.csvInsights ?? null;
   const jsonInsights = document?.jsonInsights ?? null;
+  const jsonTableSources = document?.jsonTableSources ?? [];
   const csvIssueSummary = useMemo(() => {
     if (document?.format !== "csv" || !document.issues?.length) return [];
     const grouped = new Map<string, { message: string; count: number }>();
@@ -537,7 +542,10 @@ function App() {
     else downloadBlob(document.sourceBlob, name);
   };
 
-  const convert = async (nextPreferences: Preferences = preferences) => {
+  const convert = async (
+    nextPreferences: Preferences = preferences,
+    nextJsonTableSource = jsonTableSource,
+  ) => {
     if (!document) return;
     const requestId = ++conversionRequestRef.current;
     setConversionBusy(true);
@@ -554,6 +562,9 @@ function App() {
         newline: nextPreferences.newline,
         nestedMode: nextPreferences.nestedMode,
         protectFormulas: nextPreferences.protectFormulas,
+        jsonTableSource: nextJsonTableSource,
+        inferCsvTypes: nextPreferences.inferCsvTypes,
+        csvEmptyMode: nextPreferences.csvEmptyMode,
       });
       if (requestId !== conversionRequestRef.current) return;
       setConversion({
@@ -574,23 +585,29 @@ function App() {
     void convert(next);
   };
 
+  const updateJsonSource = (source: string) => {
+    setJsonTableSource(source);
+    void convert(preferences, source);
+  };
+
   return (
-    <main>
+    <main className={document ? "document-open" : ""}>
       <div className="ambient" aria-hidden="true">
         <i className="orbit orbit-one" />
         <i className="orbit orbit-two"><span /></i>
       </div>
       <header className="topbar">
-        <a href="#top" className="brand" aria-label="Clyvora Lens home">
+        <a href={document ? "#workspace" : "#top"} className="brand" aria-label="Clyvora Lens home">
           <img src="/favicon.png" alt="" width="32" height="32" decoding="async" />
+          <span>Lens</span>
         </a>
         <nav className="site-nav" aria-label="Clyvora sites">
-          <a href="https://convert.clyvora.tech">Convert</a>
-          <a href="https://www.clyvora.tech">Home</a>
+          <a href="https://convert.clyvora.tech">Clyvora Convert</a>
+          <a href="https://www.clyvora.tech">Clyvora</a>
         </nav>
       </header>
 
-      <section id="top" className="intro" aria-labelledby="page-title">
+      {!document && <section id="top" className="intro" aria-labelledby="page-title">
         <div>
           <p className="eyebrow">
             <Sparkles size={15} aria-hidden="true" /> Local file workbench
@@ -624,14 +641,14 @@ function App() {
             if (dragDepthRef.current === 0) setDragging(false);
           }}
           onDrop={onDrop}
-          aria-label="Drop a JSON, CSV, or text file here, or use the Choose file button"
+          aria-label="Drop a JSON or CSV file here, or use the Choose file button"
         >
           <div className="drop-icon">
             <FolderOpen size={26} aria-hidden="true" />
           </div>
           <div>
             <strong>Drop a file to inspect</strong>
-            <span>JSON, CSV, or TXT · processed locally</span>
+            <span>JSON or CSV · processed locally</span>
           </div>
           <div className="drop-actions">
             <button
@@ -650,7 +667,8 @@ function App() {
               className="secondary-action"
               onClick={(event) => {
                 event.stopPropagation();
-                void pasteFromClipboard();
+                setPasteValue("");
+                setPasteOpen(true);
               }}
             >
               <ClipboardPaste size={15} aria-hidden="true" /> Paste data
@@ -660,7 +678,7 @@ function App() {
             ref={inputRef}
             className="sr-only"
             type="file"
-            accept=".json,.csv,.txt,application/json,text/csv,text/plain"
+            accept=".json,.csv,application/json,text/csv"
             onChange={onFile}
           />
           <div className="example-row">
@@ -688,7 +706,7 @@ function App() {
             <kbd>Ctrl</kbd> <span>+</span> <kbd>O</kbd> opens a file
           </p>
         </div>
-      </section>
+      </section>}
 
       <section
         id="workspace"
@@ -839,6 +857,13 @@ function App() {
               )}
             </details>
 
+            {document.format === "json" && jsonTableSources.length === 0 && (
+              <div className="conversion-hint" role="note">
+                This JSON can be inspected, but CSV conversion needs at least one
+                array containing objects. No convertible table was found.
+              </div>
+            )}
+
             <div className="tool-row">
               <label className="search-box">
                 <Search size={16} aria-hidden="true" />
@@ -952,7 +977,16 @@ function App() {
                   type="button"
                   className="primary compact"
                   onClick={() => convert()}
-                  disabled={conversionBusy || searchPending}
+                  disabled={
+                    conversionBusy ||
+                    searchPending ||
+                    (document.format === "json" && !jsonTableSource)
+                  }
+                  title={
+                    document.format === "json" && !jsonTableSource
+                      ? "No array of objects is available to convert"
+                      : undefined
+                  }
                 >
                   {searchPending
                     ? "Searching…"
@@ -1068,23 +1102,70 @@ function App() {
                 <small>Saved on this device</small>
               </div>
               {document?.format === "csv" ? (
-                <label>
-                  <span>Rows</span>
-                  <select
-                    value={preferences.exportScope}
-                    disabled={conversionBusy}
-                    onChange={(event) =>
-                      updateConversionPreference({
-                        exportScope: event.target.value as "all" | "filtered",
-                      })
-                    }
-                  >
-                    <option value="all">All rows ({document.itemCount})</option>
-                    <option value="filtered">Current view ({csvView.total})</option>
-                  </select>
-                </label>
+                <>
+                  <label>
+                    <span>Rows</span>
+                    <select
+                      value={preferences.exportScope}
+                      disabled={conversionBusy}
+                      onChange={(event) =>
+                        updateConversionPreference({
+                          exportScope: event.target.value as "all" | "filtered",
+                        })
+                      }
+                    >
+                      <option value="all">All rows ({document.itemCount})</option>
+                      <option value="filtered">Current view ({csvView.total})</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Value types</span>
+                    <select
+                      value={preferences.inferCsvTypes ? "infer" : "text"}
+                      disabled={conversionBusy}
+                      onChange={(event) =>
+                        updateConversionPreference({
+                          inferCsvTypes: event.target.value === "infer",
+                        })
+                      }
+                    >
+                      <option value="infer">Infer numbers and booleans</option>
+                      <option value="text">Keep every value as text</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Empty cells</span>
+                    <select
+                      value={preferences.csvEmptyMode}
+                      disabled={conversionBusy}
+                      onChange={(event) =>
+                        updateConversionPreference({
+                          csvEmptyMode: event.target.value as CsvEmptyMode,
+                        })
+                      }
+                    >
+                      <option value="empty">Empty text</option>
+                      <option value="null">null</option>
+                      <option value="omit">Omit property</option>
+                    </select>
+                  </label>
+                </>
               ) : (
                 <>
+                  <label>
+                    <span>Table source</span>
+                    <select
+                      value={jsonTableSource}
+                      disabled={conversionBusy}
+                      onChange={(event) => updateJsonSource(event.target.value)}
+                    >
+                      {jsonTableSources.map((source) => (
+                        <option key={source.id} value={source.id}>
+                          {source.label} ({source.rows} rows)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label>
                     <span>Delimiter</span>
                     <select
@@ -1129,6 +1210,7 @@ function App() {
                     >
                       <option value="stringify">Keep as JSON text</option>
                       <option value="flatten">Flatten object paths</option>
+                      <option value="expand">Expand arrays into rows</option>
                     </select>
                   </label>
                   <label>
@@ -1190,6 +1272,65 @@ function App() {
               >
                 <Download size={16} /> Download{" "}
                 {conversion.format.toUpperCase()}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {pasteOpen && (
+        <div className="modal-backdrop">
+          <section
+            ref={dialogRef}
+            className="modal paste-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="paste-title"
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">Local input</p>
+                <h2 id="paste-title">Paste JSON or CSV</h2>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setPasteOpen(false)}
+                aria-label="Close paste editor"
+              >
+                <X size={19} />
+              </button>
+            </div>
+            <p className="modal-note">
+              Paste, review, and edit the data below. Nothing is inspected until
+              you choose Inspect data, and nothing leaves this browser.
+            </p>
+            <label className="paste-editor-label">
+              <span className="sr-only">JSON or CSV data</span>
+              <textarea
+                className="paste-editor"
+                value={pasteValue}
+                onChange={(event) => setPasteValue(event.target.value)}
+                placeholder={'Paste JSON or CSV here…\n\nExample: [{"name":"Ada"}]'}
+                spellCheck={false}
+                autoFocus
+              />
+            </label>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="quiet"
+                onClick={() => setPasteOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={!pasteValue.trim()}
+                onClick={() => void inspectPastedData()}
+              >
+                Inspect data
               </button>
             </div>
           </section>

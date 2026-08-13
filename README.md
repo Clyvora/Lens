@@ -11,13 +11,14 @@ Clyvora Lens is a private, local-first workbench for inspecting, searching, filt
 
 ## Features
 
-- Open `.json`, `.csv`, and `.txt` files by dropping, choosing, or pasting data.
+- Open `.json` and `.csv` files by dropping, choosing, or pasting data into an editable local input.
 - Detect JSON and CSV using the filename and file contents.
 - Explore JSON as a collapsible tree or formatted raw text.
 - Search JSON keys and values, copy paths or subtrees, and download formatted JSON.
 - Search, filter, and sort CSV data in a responsive table.
 - Parse quoted fields, escaped delimiters, embedded newlines, empty cells, and duplicate headers.
-- Convert CSV to JSON and arrays of JSON objects to CSV without changing the original.
+- Convert CSV to typed JSON and choose table-shaped arrays inside nested JSON for CSV conversion.
+- Flatten nested objects, preserve them as JSON text, or expand nested arrays into rows.
 - Preview conversions and choose CSV delimiter, line ending, nested-object handling, and formula protection.
 - Process large files off the main browser thread and warn before opening unusually large files.
 - Respect keyboard navigation, visible focus states, and reduced-motion preferences.

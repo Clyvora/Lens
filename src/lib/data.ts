@@ -33,7 +33,13 @@ export interface CsvDocument {
 
 export type CsvDelimiter = ',' | ';' | '\t'
 export type CsvLineEnding = '\n' | '\r\n'
-export type NestedJsonMode = 'stringify' | 'flatten'
+export type NestedJsonMode = 'stringify' | 'flatten' | 'expand'
+export type CsvEmptyMode = 'empty' | 'null' | 'omit'
+
+export interface CsvToJsonOptions {
+  inferTypes?: boolean
+  emptyMode?: CsvEmptyMode
+}
 
 export interface JsonToCsvOptions {
   delimiter?: CsvDelimiter
@@ -265,10 +271,37 @@ export function parseCsv(content: string): Result<CsvDocument> {
   return { ok: true, data: { columns, rows, errors } }
 }
 
-export function csvToJson(csvData: CsvDocument): JsonObject[] {
+const OMIT_CELL = Symbol('omit-cell')
+
+function typedCsvCell(value: string, options: CsvToJsonOptions): JsonPrimitive | typeof OMIT_CELL {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    if (options.emptyMode === 'null') return null
+    if (options.emptyMode === 'omit') return OMIT_CELL
+    return ''
+  }
+  if (!options.inferTypes) return value
+  if (/^(?:true|false)$/i.test(trimmed)) return trimmed.toLowerCase() === 'true'
+  if (/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(trimmed) && Number.isFinite(Number(trimmed))) {
+    const number = Number(trimmed)
+    const unsigned = trimmed.replace(/^[-+]/, '')
+    const hasSignificantLeadingZero = /^0\d/.test(unsigned)
+    const unsafeInteger = Number.isInteger(number) && !Number.isSafeInteger(number)
+    if (!hasSignificantLeadingZero && !unsafeInteger) return number
+  }
+  return value
+}
+
+export function csvToJson(
+  csvData: CsvDocument,
+  options: CsvToJsonOptions = {},
+): JsonObject[] {
   return csvData.rows.map((row) => {
     const item: JsonObject = {}
-    for (const column of csvData.columns) item[column] = row[column] ?? ''
+    for (const column of csvData.columns) {
+      const value = typedCsvCell(row[column] ?? '', options)
+      if (value !== OMIT_CELL) item[column] = value
+    }
     return item
   })
 }
@@ -291,14 +324,62 @@ function csvCell(
   return value
 }
 
+function assignUnique(target: JsonObject, key: string, value: JsonValue) {
+  if (Object.hasOwn(target, key)) {
+    throw new Error(`Flattening creates the duplicate column “${key}”. Rename the conflicting JSON key or keep nested values as JSON text.`)
+  }
+  target[key] = value
+}
+
 function flattenJsonObject(value: JsonObject, prefix = ''): JsonObject {
   const flattened: JsonObject = {}
   for (const [key, child] of Object.entries(value)) {
     const path = prefix ? `${prefix}.${key}` : key
-    if (isJsonObject(child)) Object.assign(flattened, flattenJsonObject(child, path))
-    else flattened[path] = child
+    if (isJsonObject(child)) {
+      const nested = flattenJsonObject(child, path)
+      for (const [nestedKey, nestedValue] of Object.entries(nested)) {
+        assignUnique(flattened, nestedKey, nestedValue)
+      }
+    } else assignUnique(flattened, path, child)
   }
   return flattened
+}
+
+function mergeExpandedRows(left: JsonObject[], right: JsonObject[]): JsonObject[] {
+  if (left.length * right.length > 1_000_000) {
+    throw new Error('Expanding these nested arrays would create more than 1,000,000 rows. Choose a narrower table source or keep arrays as JSON text.')
+  }
+  const merged: JsonObject[] = []
+  for (const leftRow of left) {
+    for (const rightRow of right) {
+      const next = { ...leftRow }
+      for (const [key, value] of Object.entries(rightRow)) assignUnique(next, key, value)
+      merged.push(next)
+    }
+  }
+  return merged
+}
+
+function expandJsonObject(value: JsonObject, prefix = ''): JsonObject[] {
+  let rows: JsonObject[] = [{}]
+  for (const [key, child] of Object.entries(value)) {
+    const path = prefix ? `${prefix}.${key}` : key
+    let variants: JsonObject[]
+    if (isJsonObject(child)) {
+      variants = expandJsonObject(child, path)
+    } else if (Array.isArray(child)) {
+      if (child.length === 0) variants = [{ [path]: null }]
+      else {
+        variants = child.flatMap((item) =>
+          isJsonObject(item)
+            ? expandJsonObject(item, path)
+            : [{ [path]: item }],
+        )
+      }
+    } else variants = [{ [path]: child }]
+    rows = mergeExpandedRows(rows, variants)
+  }
+  return rows
 }
 
 export function jsonToCsv(jsonValue: JsonValue, options: JsonToCsvOptions = {}): Result<string> {
@@ -324,9 +405,22 @@ export function jsonToCsv(jsonValue: JsonValue, options: JsonToCsvOptions = {}):
 
   if (jsonValue.length === 0) return { ok: true, data: '' }
 
-  const objects = options.nestedMode === 'flatten'
-    ? jsonValue.map((item) => flattenJsonObject(item))
-    : jsonValue
+  let objects: JsonObject[]
+  try {
+    objects = options.nestedMode === 'expand'
+      ? jsonValue.flatMap((item) => expandJsonObject(item))
+      : options.nestedMode === 'flatten'
+        ? jsonValue.map((item) => flattenJsonObject(item))
+        : jsonValue
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Nested JSON could not be flattened safely.',
+        code: 'FLATTEN_COLLISION',
+      },
+    }
+  }
   const columns = Array.from(new Set(objects.flatMap((item) => Object.keys(item))))
   const rows = objects.map((item) =>
     columns.map((column) => csvCell(item[column], options.protectFormulas)),

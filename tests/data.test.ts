@@ -114,6 +114,20 @@ describe('conversion', () => {
     ])
   })
 
+  it('can infer CSV numbers and booleans and control empty cells', () => {
+    const parsed = parseCsv('name,score,active,note,id\nAda,9,true,,00123\nGrace,10.5,false,ready,9007199254740993')
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+
+    expect(csvToJson(parsed.data, { inferTypes: true, emptyMode: 'null' })).toEqual([
+      { name: 'Ada', score: 9, active: true, note: null, id: '00123' },
+      { name: 'Grace', score: 10.5, active: false, note: 'ready', id: '9007199254740993' },
+    ])
+    expect(csvToJson(parsed.data, { emptyMode: 'omit' })[0]).toEqual({
+      name: 'Ada', score: '9', active: 'true', id: '00123',
+    })
+  })
+
   it('converts heterogeneous JSON objects to correctly escaped CSV', () => {
     const result = jsonToCsv([
       { name: 'Ada', note: 'hello, world' },
@@ -152,6 +166,35 @@ describe('conversion', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.data).toBe('name;profile.active;profile.score\r\nAda;true;9')
+  })
+
+  it('can expand nested arrays into repeated CSV rows', () => {
+    const result = jsonToCsv(
+      [{ user: { name: 'Ada' }, files: [{ name: 'one.pdf' }, { name: 'two.csv' }] }],
+      { nestedMode: 'expand' },
+    )
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const parsed = parseCsv(result.data)
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect(parsed.data.rows).toEqual([
+      { 'user.name': 'Ada', 'files.name': 'one.pdf' },
+      { 'user.name': 'Ada', 'files.name': 'two.csv' },
+    ])
+  })
+
+  it('rejects flattening that would overwrite a column', () => {
+    const result = jsonToCsv(
+      [{ 'profile.name': 'original', profile: { name: 'nested' } }],
+      { nestedMode: 'flatten' },
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: 'FLATTEN_COLLISION' }),
+    })
   })
 
   it('can protect spreadsheet formula-like string cells', () => {
