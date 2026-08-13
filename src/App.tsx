@@ -602,7 +602,7 @@ function App() {
           <span>Lens</span>
         </a>
         <nav className="site-nav" aria-label="Clyvora sites">
-          <a href="https://convert.clyvora.tech">Clyvora Convert</a>
+          <a href="https://www.convert.clyvora.tech">Clyvora Convert</a>
           <a href="https://www.clyvora.tech">Clyvora</a>
         </nav>
       </header>
@@ -1090,7 +1090,7 @@ function App() {
       <footer>
         <div className="footer-links">
           <a href="https://www.clyvora.tech/about/">About Clyvora</a>
-          <a href="https://convert.clyvora.tech">Clyvora Convert</a>
+          <a href="https://www.convert.clyvora.tech">Clyvora Convert</a>
           <a
             href="https://github.com/ClyvoraTech/Lens"
             target="_blank"
