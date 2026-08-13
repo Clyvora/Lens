@@ -1,5 +1,5 @@
-import { memo, useEffect, useMemo, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronRight, Copy } from "lucide-react";
 
 type JsonValue =
   | null
@@ -18,6 +18,9 @@ interface JsonTreeProps {
 }
 
 const BRANCH_PAGE_SIZE = 100;
+const EMPTY_PATHS = new Set<string>();
+
+type CopyNode = (text: string, token: string, label: string) => void;
 
 function makeChildPath(parent: string, key: string, isArray: boolean) {
   if (isArray) return `${parent}[${key}]`;
@@ -48,6 +51,8 @@ function TreeNode({
   showPaths,
   exactPaths,
   branchPaths,
+  copiedToken,
+  onCopy,
 }: {
   name: string;
   value: JsonValue;
@@ -57,6 +62,8 @@ function TreeNode({
   showPaths: boolean;
   exactPaths: ReadonlySet<string>;
   branchPaths: ReadonlySet<string>;
+  copiedToken: string;
+  onCopy: CopyNode;
 }) {
   const branch = value !== null && typeof value === "object";
   const isArray = Array.isArray(value);
@@ -89,6 +96,30 @@ function TreeNode({
         <span className="json-punctuation">: </span>
         <Leaf value={value} />
         {showPaths && <span className="json-path">{path}</span>}
+        <span className="tree-node-actions">
+          <button
+            type="button"
+            onClick={() => onCopy(path, `${path}:path`, "Path")}
+            aria-label={`Copy path ${path}`}
+          >
+            {copiedToken === `${path}:path` ? <Check size={12} /> : <Copy size={12} />}
+            Path
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onCopy(
+                typeof value === "string" ? value : String(value),
+                `${path}:value`,
+                "Value",
+              )
+            }
+            aria-label={`Copy value at ${path}`}
+          >
+            {copiedToken === `${path}:value` ? <Check size={12} /> : <Copy size={12} />}
+            Value
+          </button>
+        </span>
       </div>
     );
   }
@@ -140,6 +171,30 @@ function TreeNode({
           {entryCount} {isArray ? "items" : "keys"}
         </span>
         {showPaths && <span className="json-path">{path}</span>}
+        <span className="tree-node-actions">
+          <button
+            type="button"
+            onClick={() => onCopy(path, `${path}:path`, "Path")}
+            aria-label={`Copy path ${path}`}
+          >
+            {copiedToken === `${path}:path` ? <Check size={12} /> : <Copy size={12} />}
+            Path
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onCopy(
+                JSON.stringify(value, null, 2),
+                `${path}:value`,
+                "Subtree",
+              )
+            }
+            aria-label={`Copy JSON subtree at ${path}`}
+          >
+            {copiedToken === `${path}:value` ? <Check size={12} /> : <Copy size={12} />}
+            Subtree
+          </button>
+        </span>
       </div>
       {open && (
         <div role="group">
@@ -159,6 +214,8 @@ function TreeNode({
                 showPaths={showPaths}
                 exactPaths={exactPaths}
                 branchPaths={branchPaths}
+                copiedToken={copiedToken}
+                onCopy={onCopy}
               />
             );
           })}
@@ -195,9 +252,37 @@ export const JsonTree = memo(function JsonTree({
   value,
   search,
   showPaths = false,
-  exactPaths = new Set<string>(),
-  branchPaths = new Set<string>(),
+  exactPaths = EMPTY_PATHS,
+  branchPaths = EMPTY_PATHS,
 }: JsonTreeProps) {
+  const [copiedToken, setCopiedToken] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
+  const copyTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(
+    null,
+  );
+
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current) globalThis.clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
+
+  const copyNode = useCallback<CopyNode>(async (text, token, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedToken(token);
+      setCopyMessage(`${label} copied.`);
+      if (copyTimerRef.current) globalThis.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = globalThis.setTimeout(() => {
+        setCopiedToken("");
+        setCopyMessage("");
+      }, 1600);
+    } catch {
+      setCopyMessage(`Could not copy ${label.toLowerCase()}.`);
+    }
+  }, []);
+
   return (
     <div className="json-tree" role="tree" aria-label="JSON structure">
       <TreeNode
@@ -209,7 +294,12 @@ export const JsonTree = memo(function JsonTree({
         showPaths={showPaths}
         exactPaths={exactPaths}
         branchPaths={branchPaths}
+        copiedToken={copiedToken}
+        onCopy={copyNode}
       />
+      <span className="sr-only" aria-live="polite">
+        {copyMessage}
+      </span>
     </div>
   );
 });

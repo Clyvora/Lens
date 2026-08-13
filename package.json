@@ -1,7 +1,28 @@
 {
   "name": "clyvora-lens",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "A private, local-first JSON and CSV inspector that runs entirely in the browser.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ClyvoraTech/Lens.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ClyvoraTech/Lens/issues"
+  },
+  "homepage": "https://github.com/ClyvoraTech/Lens#readme",
+  "keywords": [
+    "csv",
+    "json",
+    "local-first",
+    "privacy",
+    "react",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

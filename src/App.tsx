@@ -11,8 +11,10 @@ import {
   Check,
   ChevronDown,
   Clipboard,
+  ClipboardPaste,
   Database,
   Download,
+  ExternalLink,
   FileJson2,
   FileSpreadsheet,
   FolderOpen,
@@ -41,7 +43,6 @@ import type {
   JsonSearchPayload,
   ParsedDocumentPayload,
 } from "./workers/protocol";
-import "./App.css";
 
 type Format = "json" | "csv";
 
@@ -161,6 +162,7 @@ const LargeTextView = memo(function LargeTextView({
 
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -405,9 +407,26 @@ function App() {
 
   const onDrop = (event: DragEvent) => {
     event.preventDefault();
+    dragDepthRef.current = 0;
     setDragging(false);
     const file = event.dataTransfer.files[0];
     if (file) readFile(file);
+  };
+
+  const pasteFromClipboard = async () => {
+    setError("");
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        setError("The clipboard does not contain any text to inspect.");
+        return;
+      }
+      await loadContent("clipboard.txt", text);
+    } catch {
+      setError(
+        "Clipboard access was blocked. Allow clipboard permission or choose a file instead.",
+      );
+    }
   };
 
   useEffect(() => setVisibleCsvRows(CSV_PAGE_SIZE), [
@@ -598,11 +617,18 @@ function App() {
         </div>
         <div
           className={`drop-zone ${dragging ? "is-dragging" : ""}`}
-          onDragOver={(event) => {
+          onDragEnter={(event) => {
             event.preventDefault();
+            dragDepthRef.current += 1;
             setDragging(true);
           }}
-          onDragLeave={() => setDragging(false)}
+          onDragOver={(event) => {
+            event.preventDefault();
+          }}
+          onDragLeave={() => {
+            dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+            if (dragDepthRef.current === 0) setDragging(false);
+          }}
           onDrop={onDrop}
           aria-label="Drop a JSON, CSV, or text file here, or use the Choose file button"
         >
@@ -613,17 +639,29 @@ function App() {
             <strong>Drop a file to inspect</strong>
             <span>JSON, CSV, or TXT · processed locally</span>
           </div>
-          <button
-            type="button"
-            className="primary"
-            aria-keyshortcuts="Control+O Meta+O"
-            onClick={(event) => {
-              event.stopPropagation();
-              inputRef.current?.click();
-            }}
-          >
-            Choose file
-          </button>
+          <div className="drop-actions">
+            <button
+              type="button"
+              className="primary"
+              aria-keyshortcuts="Control+O Meta+O"
+              onClick={(event) => {
+                event.stopPropagation();
+                inputRef.current?.click();
+              }}
+            >
+              Choose file
+            </button>
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={(event) => {
+                event.stopPropagation();
+                void pasteFromClipboard();
+              }}
+            >
+              <ClipboardPaste size={15} aria-hidden="true" /> Paste data
+            </button>
+          </div>
           <input
             ref={inputRef}
             className="sr-only"
@@ -652,6 +690,9 @@ function App() {
               <FileSpreadsheet size={14} /> CSV example
             </button>
           </div>
+          <p className="shortcut-hint">
+            <kbd>Ctrl</kbd> <span>+</span> <kbd>O</kbd> opens a file
+          </p>
         </div>
       </section>
 
@@ -981,7 +1022,14 @@ function App() {
       </section>
 
       <footer>
-        <span>Clyvora Lens</span>
+        <a
+          href="https://github.com/ClyvoraTech/Lens"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="View Clyvora Lens source code on GitHub"
+        >
+          <ExternalLink size={14} aria-hidden="true" /> Open source on GitHub
+        </a>
         <span>Private by design · No uploads · No tracking</span>
       </footer>
 

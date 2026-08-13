@@ -1,0 +1,69 @@
+# Clyvora Lens
+
+[![CI](https://github.com/ClyvoraTech/Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/ClyvoraTech/Lens/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-eeeae1.svg)](LICENSE)
+
+Clyvora Lens is a private, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files. It runs entirely in the browser: **your files never leave this device.**
+
+![Clyvora Lens social preview](public/og.png)
+
+> Clyvora Lens is currently beta software. Keep a copy of important source files and verify converted output before using it in critical workflows.
+
+## Features
+
+- Open `.json`, `.csv`, and `.txt` files by dropping, choosing, or pasting data.
+- Detect JSON and CSV using the filename and file contents.
+- Explore JSON as a collapsible tree or formatted raw text.
+- Search JSON keys and values, copy paths or subtrees, and download formatted JSON.
+- Search, filter, and sort CSV data in a responsive table.
+- Parse quoted fields, escaped delimiters, embedded newlines, empty cells, and duplicate headers.
+- Convert CSV to JSON and arrays of JSON objects to CSV without changing the original.
+- Preview conversions and choose CSV delimiter, line ending, nested-object handling, and formula protection.
+- Process large files off the main browser thread and warn before opening unusually large files.
+- Respect keyboard navigation, visible focus states, and reduced-motion preferences.
+
+## Privacy
+
+File contents are parsed and transformed locally in your browser. Clyvora Lens has no backend, account system, analytics, cloud storage, advertising, external API, or AI integration. It does not log file contents.
+
+The only browser storage used is `localStorage` for conversion preferences. See [PRIVACY.md](PRIVACY.md) for the full project privacy statement.
+
+## Run locally
+
+Requirements: Node.js 22.12 or newer and npm.
+
+```bash
+git clone https://github.com/ClyvoraTech/Lens.git
+cd Lens
+npm ci
+npm run dev
+```
+
+Vite will print the local address to open in your browser.
+
+## Quality checks
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+The tests focus on JSON validation, format detection, CSV parsing, data profiling, and both conversion directions. Pull requests run the same checks automatically.
+
+## Architecture
+
+- `src/App.tsx` coordinates file intake, inspector state, and the workbench UI.
+- `src/components/` contains the JSON tree and CSV table views.
+- `src/lib/data.ts` contains parsing, validation, detection, analysis, and conversion logic.
+- `src/workers/` moves expensive parsing, search, sorting, filtering, and conversion work off the main thread.
+- `tests/` contains focused Vitest coverage for the data layer.
+- `public/` contains local metadata artwork and the favicon; the app loads no remote assets.
+
+## Contributing
+
+Bug reports, focused improvements, accessibility fixes, and performance work are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and use [SECURITY.md](SECURITY.md) for vulnerabilities.
+
+## License
+
+Clyvora Lens is available under the [MIT License](LICENSE).

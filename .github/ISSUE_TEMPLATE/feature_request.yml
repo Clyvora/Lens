@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a focused improvement to the local file workbench.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What problem would this solve?
+      description: Describe the workflow or limitation, not only the proposed control.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested approach
+      description: Explain how you imagine it working.
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy and performance considerations
+      description: Note any effect on local-only processing, large files, or new dependencies.
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Project boundaries
+      options:
+        - label: This request can work without uploading file contents or adding a backend, analytics, cloud storage, external APIs, or AI.
+          required: true
