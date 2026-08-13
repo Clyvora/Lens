@@ -578,22 +578,12 @@ function App() {
     <main>
       <div className="ambient" aria-hidden="true">
         <i className="orbit orbit-one" />
-        <i className="orbit orbit-two" />
-        <i className="glow glow-one" />
-        <i className="glow glow-two" />
+        <i className="orbit orbit-two"><span /></i>
       </div>
       <header className="topbar">
         <a href="#workspace" className="brand" aria-label="Clyvora Lens home">
-          <span className="brand-mark">C</span>
-          <span>
-            Clyvora <em>Lens</em>
-          </span>
-          <span className="beta-badge">Beta</span>
+          <img src="/favicon.png" alt="" width="32" height="32" decoding="async" />
         </a>
-        <div className="privacy">
-          <ShieldCheck size={16} aria-hidden="true" />
-          <span>Your files never leave this device.</span>
-        </div>
       </header>
 
       <section className="intro" aria-labelledby="page-title">
