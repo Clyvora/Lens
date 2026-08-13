@@ -1,6 +1,6 @@
 # Clyvora Lens
 
-> Clyvora Lens is Clyvora's free, open-source, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files.
+> Clyvora Lens is Clyvora's free, source-available, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files.
 
 Clyvora Lens runs in the browser. Selected file contents are processed on the user's device and are not uploaded to a backend. The app has no account system, analytics, cloud storage, advertising, external API, or AI integration.
 

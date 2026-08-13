@@ -1,7 +1,7 @@
 # Clyvora Lens
 
 [![CI](https://github.com/ClyvoraTech/Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/ClyvoraTech/Lens/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-eeeae1.svg)](LICENSE)
+[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm_Shield_1.0.0-eeeae1.svg)](LICENSE)
 
 Clyvora Lens is a private, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files. It runs entirely in the browser: **your files never leave this device.**
 
@@ -69,4 +69,4 @@ Bug reports, focused improvements, accessibility fixes, and performance work are
 
 ## License
 
-Clyvora Lens is available under the [MIT License](LICENSE).
+Clyvora Lens's original source code is source-available under the [PolyForm Shield License 1.0.0](LICENSE). Use, modification, and distribution are permitted except for providing a product that competes with Clyvora Lens or another product Clyvora provides using this software. This is not an OSI-approved open-source license. Versions previously published under MIT remain available under the MIT terms that accompanied those versions.

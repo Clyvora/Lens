@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "A private, local-first JSON and CSV inspector that runs entirely in the browser.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ClyvoraTech/Lens.git"

@@ -40,4 +40,4 @@ npm run build
 
 Describe what changed, why it changed, how you tested it, and any privacy or performance impact. Include screenshots for visible UI changes, using only synthetic example data.
 
-By contributing, you agree that your contribution is licensed under the project's MIT License.
+By contributing, you agree that your contribution is licensed under the project's PolyForm Shield License 1.0.0.
