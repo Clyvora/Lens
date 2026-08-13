@@ -581,12 +581,16 @@ function App() {
         <i className="orbit orbit-two"><span /></i>
       </div>
       <header className="topbar">
-        <a href="#workspace" className="brand" aria-label="Clyvora Lens home">
+        <a href="#top" className="brand" aria-label="Clyvora Lens home">
           <img src="/favicon.png" alt="" width="32" height="32" decoding="async" />
         </a>
+        <nav className="site-nav" aria-label="Clyvora sites">
+          <a href="https://convert.clyvora.tech">Convert</a>
+          <a href="https://www.clyvora.tech">Home</a>
+        </nav>
       </header>
 
-      <section className="intro" aria-labelledby="page-title">
+      <section id="top" className="intro" aria-labelledby="page-title">
         <div>
           <p className="eyebrow">
             <Sparkles size={15} aria-hidden="true" /> Local file workbench
