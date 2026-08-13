@@ -1049,15 +1049,57 @@ function App() {
         )}
       </section>
 
+      {!document && <section className="product-details" aria-labelledby="lens-details-title">
+        <div className="product-details-intro">
+          <p className="eyebrow">Built for structured data</p>
+          <h2 id="lens-details-title">A private JSON and CSV workbench.</h2>
+          <p>Clyvora Lens combines a JSON viewer, CSV inspector, search tools, data profiling, and two-way conversion without sending selected files to a backend.</p>
+        </div>
+        <div className="product-details-grid">
+          <article>
+            <h3>Inspect JSON clearly</h3>
+            <p>Expand nested objects and arrays, search keys or values, copy paths and subtrees, or switch to formatted raw JSON.</p>
+          </article>
+          <article>
+            <h3>Explore CSV data</h3>
+            <p>Search, filter, profile, and sort CSV rows while preserving quoted fields, escaped delimiters, and embedded newlines.</p>
+          </article>
+          <article>
+            <h3>Convert locally</h3>
+            <p>Convert CSV to typed JSON or select a table-shaped array inside JSON and export it as configurable CSV.</p>
+          </article>
+        </div>
+        <p className="product-formats"><strong>Supported data formats:</strong> JSON, CSV, and pasted structured text.</p>
+        <div className="product-faq" aria-labelledby="lens-faq-title">
+          <h3 id="lens-faq-title">Questions about Clyvora Lens</h3>
+          <details>
+            <summary>Are JSON or CSV files uploaded?</summary>
+            <p>No. Selected file contents are parsed, searched, and converted on your device. Lens has no backend or cloud file library.</p>
+          </details>
+          <details>
+            <summary>Can Lens handle large files?</summary>
+            <p>Parsing and expensive data operations run away from the main interface. Lens warns before unusually large files, but practical limits still depend on your browser and available device memory.</p>
+          </details>
+          <details>
+            <summary>Is converted output guaranteed to be identical?</summary>
+            <p>No. JSON and CSV represent data differently. Lens previews conversions and exposes output controls, but beta users should keep their source file and verify important results.</p>
+          </details>
+        </div>
+      </section>}
+
       <footer>
-        <a
-          href="https://github.com/ClyvoraTech/Lens"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="View Clyvora Lens source code on GitHub"
-        >
-          <ExternalLink size={14} aria-hidden="true" /> Open source on GitHub
-        </a>
+        <div className="footer-links">
+          <a href="https://www.clyvora.tech/about/">About Clyvora</a>
+          <a href="https://convert.clyvora.tech">Clyvora Convert</a>
+          <a
+            href="https://github.com/ClyvoraTech/Lens"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="View Clyvora Lens source code on GitHub"
+          >
+            <ExternalLink size={14} aria-hidden="true" /> GitHub
+          </a>
+        </div>
         <span>Private by design · No uploads · No tracking</span>
       </footer>
 

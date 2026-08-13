@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Clyvora Lens</title>
+    <title>Private JSON &amp; CSV Viewer and Converter | Clyvora Lens</title>
     <meta
       name="description"
       content="Inspect, search, filter, and convert JSON and CSV files privately in your browser. Your files never leave this device."
@@ -12,33 +12,93 @@
     <meta name="theme-color" content="#0b0b0a" />
     <meta name="color-scheme" content="dark" />
     <meta name="application-name" content="Clyvora Lens" />
-    <meta name="author" content="Clyvora contributors" />
-    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Clyvora" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <link rel="canonical" href="https://www.lens.clyvora.tech/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Clyvora Lens" />
-    <meta property="og:title" content="Clyvora Lens" />
+    <meta property="og:url" content="https://www.lens.clyvora.tech/" />
+    <meta property="og:title" content="Private JSON &amp; CSV Viewer and Converter | Clyvora Lens" />
     <meta
       property="og:description"
       content="Inspect, search, filter, and convert JSON and CSV files locally in your browser. Your files never leave this device."
     />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:image" content="https://www.lens.clyvora.tech/og.png" />
     <meta property="og:image:width" content="1728" />
     <meta property="og:image:height" content="910" />
     <meta property="og:image:alt" content="Clyvora Lens turns a JSON tree into a CSV table on a private dark workbench." />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Clyvora Lens" />
+    <meta name="twitter:title" content="Private JSON &amp; CSV Viewer and Converter | Clyvora Lens" />
     <meta
       name="twitter:description"
       content="Inspect, search, filter, and convert JSON and CSV files locally in your browser. Your files never leave this device."
     />
-    <meta name="twitter:image" content="/og.png" />
+    <meta name="twitter:image" content="https://www.lens.clyvora.tech/og.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.lens.clyvora.tech/#website",
+            "url": "https://www.lens.clyvora.tech/",
+            "name": "Clyvora Lens",
+            "publisher": { "@id": "https://www.clyvora.tech/#organization" }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://www.lens.clyvora.tech/#app",
+            "name": "Clyvora Lens",
+            "url": "https://www.lens.clyvora.tech/",
+            "description": "A free, open-source, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files in the browser.",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Any operating system with a modern web browser",
+            "browserRequirements": "Requires JavaScript and a modern web browser.",
+            "softwareVersion": "0.1.0",
+            "isAccessibleForFree": true,
+            "image": "https://www.lens.clyvora.tech/og.png",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "publisher": { "@id": "https://www.clyvora.tech/#organization" },
+            "sameAs": "https://github.com/ClyvoraTech/Lens"
+          }
+        ]
+      }
+    </script>
+
+    <style>
+      [data-static-fallback] { box-sizing: border-box; min-height: 100vh; padding: 72px max(24px, calc((100vw - 960px) / 2)); color: #eeeae1; background: #0b0b0a; font: 16px/1.65 system-ui, sans-serif; }
+      [data-static-fallback] h1 { max-width: 800px; margin: 0 0 24px; font-size: clamp(42px, 7vw, 72px); line-height: 1.02; letter-spacing: -.05em; }
+      [data-static-fallback] h2 { margin-top: 48px; font-size: 27px; }
+      [data-static-fallback] p { max-width: 760px; color: #aaa8a1; }
+      [data-static-fallback] ul { display: grid; max-width: 760px; gap: 12px; padding-left: 20px; color: #c7c4bc; }
+      [data-static-fallback] a { color: #eeeae1; }
+    </style>
 
     <link rel="icon" type="image/png" sizes="128x128" href="/favicon.png" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main data-static-fallback>
+        <h1>Private JSON and CSV viewer, inspector, and converter.</h1>
+        <p>Clyvora Lens lets you open, inspect, search, filter, sort, and convert structured data locally in your browser. Selected JSON and CSV files never leave your device.</p>
+        <h2>JSON and CSV tools</h2>
+        <ul>
+          <li>Explore JSON as a collapsible tree or formatted text.</li>
+          <li>Search JSON keys and values and copy paths or subtrees.</li>
+          <li>Search, filter, profile, and sort CSV rows.</li>
+          <li>Convert JSON to CSV or CSV to JSON with configurable options.</li>
+          <li>Process large files away from the main browser interface.</li>
+        </ul>
+        <p><a href="https://www.clyvora.tech/about/">About Clyvora Technologies</a> · <a href="https://github.com/ClyvoraTech/Lens">Clyvora Lens source code</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

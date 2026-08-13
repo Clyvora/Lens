@@ -11,10 +11,13 @@
   "bugs": {
     "url": "https://github.com/ClyvoraTech/Lens/issues"
   },
-  "homepage": "https://github.com/ClyvoraTech/Lens#readme",
+  "homepage": "https://www.lens.clyvora.tech/",
   "keywords": [
     "csv",
     "json",
+    "json-viewer",
+    "csv-viewer",
+    "json-csv-converter",
     "local-first",
     "privacy",
     "react",

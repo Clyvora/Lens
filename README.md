@@ -5,6 +5,8 @@
 
 Clyvora Lens is a private, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files. It runs entirely in the browser: **your files never leave this device.**
 
+**Use it online:** [www.lens.clyvora.tech](https://www.lens.clyvora.tech/)
+
 ![Clyvora Lens social preview](public/og.png)
 
 > Clyvora Lens is currently beta software. Keep a copy of important source files and verify converted output before using it in critical workflows.
