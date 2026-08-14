@@ -29,7 +29,7 @@ npm run build
 ## Project rules
 
 - Keep all file parsing and conversion in the browser.
-- Do not add a backend, authentication, analytics, cloud storage, external APIs, AI, remote fonts, or remote runtime assets.
+- Do not add a backend, authentication, custom analytics events, behavioural tracking, cloud storage, external APIs, AI, remote fonts, or remote runtime assets.
 - Never log file contents or include user data in error reporting.
 - Keep parsing and conversion logic separate from UI components.
 - Add or update focused tests for changes to parsing, validation, search, sorting, filtering, or conversion.

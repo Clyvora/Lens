@@ -11,7 +11,7 @@ When a user opens or pastes JSON or CSV, the browser reads and processes that da
 Clyvora Lens does not include:
 
 - accounts or authentication;
-- analytics or advertising;
+- advertising or behavioural profiling;
 - telemetry or error-reporting services;
 - a backend or database;
 - cloud storage;
@@ -19,6 +19,12 @@ Clyvora Lens does not include:
 - logging of file contents.
 
 The app stores conversion preferences in the browser's `localStorage`. Those preferences contain settings such as delimiter and line-ending choices, not file contents. They can be removed by clearing site data in the browser.
+
+## Anonymous website analytics
+
+The deployed site uses Vercel Web Analytics to record anonymous, aggregated page-view statistics. Vercel Web Analytics does not use cookies or store personal identifiers. A standard page view may include the visited path, referrer, coarse location, browser, operating system, and device type. Clyvora Lens does not configure custom analytics events, and filenames, pasted data, and file contents are never included in analytics events.
+
+Page-view data is transmitted to and processed by Vercel. See [Vercel's Web Analytics privacy documentation](https://vercel.com/docs/analytics/privacy-policy) for details.
 
 ## Hosting note
 

@@ -27,7 +27,7 @@ Clyvora Lens is a private, local-first workbench for inspecting, searching, filt
 
 ## Privacy
 
-File contents are parsed and transformed locally in your browser. Clyvora Lens has no backend, account system, analytics, cloud storage, advertising, external API, or AI integration. It does not log file contents.
+File contents are parsed and transformed locally in your browser. Clyvora Lens has no backend, account system, cloud storage, advertising, external API, or AI integration. It does not log file contents. The deployed site uses Vercel Web Analytics for anonymous, cookie-free page views; no custom events, filenames, or file contents are sent to analytics.
 
 The only browser storage used is `localStorage` for conversion preferences. See [PRIVACY.md](PRIVACY.md) for the full project privacy statement.
 
