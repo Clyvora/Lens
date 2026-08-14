@@ -1,6 +1,6 @@
 # Clyvora Lens
 
-[![CI](https://github.com/ClyvoraTech/Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/ClyvoraTech/Lens/actions/workflows/ci.yml)
+[![CI](https://github.com/Clyvora/Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/Clyvora/Lens/actions/workflows/ci.yml)
 [![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm_Shield_1.0.0-eeeae1.svg)](LICENSE)
 
 Clyvora Lens is a private, local-first workbench for inspecting, searching, filtering, and converting JSON and CSV files. It runs entirely in the browser: **your files never leave this device.**
@@ -36,7 +36,7 @@ The only browser storage used is `localStorage` for conversion preferences. See 
 Requirements: Node.js 22.12 or newer and npm.
 
 ```bash
-git clone https://github.com/ClyvoraTech/Lens.git
+git clone https://github.com/Clyvora/Lens.git
 cd Lens
 npm ci
 npm run dev

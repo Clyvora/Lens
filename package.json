@@ -6,10 +6,10 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ClyvoraTech/Lens.git"
+    "url": "git+https://github.com/Clyvora/Lens.git"
   },
   "bugs": {
-    "url": "https://github.com/ClyvoraTech/Lens/issues"
+    "url": "https://github.com/Clyvora/Lens/issues"
   },
   "homepage": "https://www.lens.clyvora.tech/",
   "keywords": [

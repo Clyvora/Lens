@@ -15,6 +15,6 @@ Clyvora Lens runs in the browser. Selected file contents are processed on the us
 ## Official links
 
 - [Use Clyvora Lens](https://www.lens.clyvora.tech/)
-- [Clyvora Lens source code](https://github.com/ClyvoraTech/Lens)
+- [Clyvora Lens source code](https://github.com/Clyvora/Lens)
 - [Clyvora](https://www.clyvora.tech/)
 - [Clyvora Convert](https://www.convert.clyvora.tech/)

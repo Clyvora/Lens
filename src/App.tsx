@@ -1092,7 +1092,7 @@ function App() {
           <a href="https://www.clyvora.tech/about/">About Clyvora</a>
           <a href="https://www.convert.clyvora.tech">Clyvora Convert</a>
           <a
-            href="https://github.com/ClyvoraTech/Lens"
+            href="https://github.com/Clyvora/Lens"
             target="_blank"
             rel="noreferrer"
             aria-label="View Clyvora Lens source code on GitHub"
