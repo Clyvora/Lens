@@ -1,13 +1,13 @@
-# Security Policy
+# Security policy
 
-## Supported versions
+## Supported version
 
-Clyvora Lens is beta software. Security fixes are applied to the latest code on the `main` branch.
+Clyvora Lens is beta software. Security fixes are applied to the latest code on `main`.
 
-## Report a vulnerability
+## Report privately
 
-Please do not open a public issue for a suspected vulnerability. Use GitHub's private vulnerability reporting for this repository from the **Security** tab.
+Email **security@clyvora.tech** or use [GitHub private vulnerability reporting](https://github.com/Clyvora/Lens/security/advisories/new). Do not publish exploit details in an issue. Use synthetic data and include the affected browser, reproduction steps, impact, and any suggested mitigation.
 
-Include a clear description, affected browser or environment, reproduction steps, and the potential impact. Never attach real private files or paste sensitive file contents; use the smallest synthetic example that demonstrates the issue.
+We aim to acknowledge reports within five business days, provide a severity assessment after initial reproduction, and coordinate a fix before public disclosure. A 90-day disclosure window is the default, but it may be shortened for active exploitation or extended by mutual agreement.
 
-Please allow the maintainers time to investigate before publishing details. Reports will be acknowledged and handled as maintainer availability permits; this volunteer project does not promise a fixed response window.
+Severity is based on impact and exploitability: **Critical** means practical compromise of file confidentiality or arbitrary code execution; **High** means significant unauthorized access or persistent compromise; **Medium** means limited security or privacy impact requiring specific conditions; **Low** means defense-in-depth or minor information exposure.

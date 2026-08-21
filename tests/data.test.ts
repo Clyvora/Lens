@@ -5,6 +5,7 @@ import {
   csvToJson,
   detectFormat,
   formatJson,
+  jsonExceedsDepth,
   jsonToCsv,
   parseCsv,
   parseJson,
@@ -34,6 +35,21 @@ describe('JSON parsing', () => {
       ok: false,
       error: expect.objectContaining({ code: 'EMPTY_JSON' }),
     })
+  })
+
+  it('rejects JSON that exceeds the safe nesting depth', () => {
+    let nested = '0'
+    for (let depth = 0; depth < 513; depth += 1) nested = `[${nested}]`
+    const result = parseJson(nested)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.code).toBe('JSON_TOO_DEEP')
+  })
+
+  it('checks depth iteratively without recursing', () => {
+    let value: unknown = 0
+    for (let depth = 0; depth < 600; depth += 1) value = [value]
+    expect(jsonExceedsDepth(value as never, 512)).toBe(true)
   })
 })
 

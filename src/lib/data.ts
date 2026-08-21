@@ -206,10 +206,37 @@ export function parseJson(content: string): Result<JsonValue> {
   }
 
   try {
-    return { ok: true, data: JSON.parse(content) as JsonValue }
+    const data = JSON.parse(content) as JsonValue
+    if (jsonExceedsDepth(data, 512)) {
+      return {
+        ok: false,
+        error: {
+          message: 'This JSON is nested more than 512 levels deep. Lens stops here to keep this tab responsive.',
+          code: 'JSON_TOO_DEEP',
+        },
+      }
+    }
+    return { ok: true, data }
   } catch (error) {
     return { ok: false, error: jsonParseIssue(content, error) }
   }
+}
+
+export function jsonExceedsDepth(value: JsonValue, maximumDepth: number): boolean {
+  const stack: Array<{ value: JsonValue; depth: number }> = [{ value, depth: 1 }]
+  while (stack.length) {
+    const current = stack.pop()
+    if (!current) continue
+    if (current.depth > maximumDepth) return true
+    if (!current.value || typeof current.value !== 'object') continue
+    const children = Array.isArray(current.value)
+      ? current.value
+      : Object.values(current.value)
+    for (const child of children) {
+      stack.push({ value: child, depth: current.depth + 1 })
+    }
+  }
+  return false
 }
 
 export function formatJson(value: JsonValue, spaces = 2): string {

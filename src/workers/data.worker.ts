@@ -34,6 +34,7 @@ let csvSearchCache = new Map<string, string[]>();
 let queryCacheKey = "";
 let queryCacheRows: Array<Record<string, string>> = [];
 const CONVERSION_PREVIEW_LIMIT = 200_000;
+const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 
 function resetState() {
   currentJson = undefined;
@@ -83,6 +84,10 @@ function parseDocument(
   filename: string,
   source: string | ArrayBuffer,
 ): ParsedDocumentPayload {
+  const sourceSize = typeof source === "string" ? source.length : source.byteLength;
+  if (sourceSize > MAX_SOURCE_BYTES) {
+    throw new Error("This file is larger than Lens's 25 MB safety limit.");
+  }
   const content = typeof source === "string"
     ? source
     : new TextDecoder("utf-8").decode(source);

@@ -1,0 +1,6 @@
+Contact: mailto:security@clyvora.tech
+Contact: https://github.com/Clyvora/Lens/security/advisories/new
+Expires: 2027-08-21T00:00:00Z
+Preferred-Languages: en
+Canonical: https://www.lens.clyvora.tech/.well-known/security.txt
+Policy: https://github.com/Clyvora/Lens/blob/main/SECURITY.md

@@ -80,7 +80,9 @@ Beacon,Research,Paused,"Said ""keep it local"""
 Morrow,Engineering,Active,
 Lumen,Operations,Review,"Ready for inspection"`;
 
-const LARGE_FILE_BYTES = 10 * 1024 * 1024;
+const LARGE_FILE_WARNING_BYTES = 10 * 1024 * 1024;
+const DESKTOP_FILE_LIMIT_BYTES = 25 * 1024 * 1024;
+const CONSTRAINED_FILE_LIMIT_BYTES = 10 * 1024 * 1024;
 const CSV_PAGE_SIZE = 200;
 const PREFERENCES_KEY = "clyvora-lens-preferences";
 
@@ -145,6 +147,19 @@ function downloadText(text: string, filename: string, type: string) {
 
 function baseName(name: string) {
   return name.replace(/\.[^.]+$/, "");
+}
+
+function fileLimitBytes() {
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  return mobile || (typeof memory === "number" && memory <= 4)
+    ? CONSTRAINED_FILE_LIMIT_BYTES
+    : DESKTOP_FILE_LIMIT_BYTES;
+}
+
+function fileLimitMessage(limit: number) {
+  return `This file is larger than Lens's ${humanSize(limit)} safety limit for this device.`;
 }
 
 const LargeTextView = memo(function LargeTextView({
@@ -384,6 +399,11 @@ function App() {
   const loadContent = (name: string, content: string) => {
     readRequestRef.current += 1;
     const blob = new Blob([content], { type: "text/plain" });
+    const limit = fileLimitBytes();
+    if (blob.size > limit) {
+      setError(fileLimitMessage(limit));
+      return Promise.resolve();
+    }
     return loadSource(name, content, blob);
   };
 
@@ -392,7 +412,13 @@ function App() {
       setError("Unsupported file type. Choose a .json or .csv file.");
       return;
     }
-    if (file.size > LARGE_FILE_BYTES) {
+    const limit = fileLimitBytes();
+    if (file.size > limit) {
+      setPendingFile(null);
+      setError(fileLimitMessage(limit));
+      return;
+    }
+    if (file.size > LARGE_FILE_WARNING_BYTES) {
       setPendingFile(file);
       return;
     }
@@ -1078,7 +1104,7 @@ function App() {
           </details>
           <details>
             <summary>Can Lens handle large files?</summary>
-            <p>Parsing and expensive data operations run away from the main interface. Lens warns before unusually large files, but practical limits still depend on your browser and available device memory.</p>
+            <p>Parsing runs away from the main interface. Lens limits files to 25 MB on desktop-class devices and 10 MB on mobile or lower-memory devices to prevent a browser tab crash.</p>
           </details>
           <details>
             <summary>Is converted output guaranteed to be identical?</summary>
