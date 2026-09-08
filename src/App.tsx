@@ -1,3 +1,6 @@
+import { MorphText } from './MorphText'
+import { ChoiceGroup } from './ChoiceGroup'
+import { ThemeToggle } from './ThemeToggle'
 import {
   memo,
   useCallback,
@@ -21,8 +24,6 @@ import {
   RotateCcw,
   Search,
   Settings2,
-  ShieldCheck,
-  Sparkles,
   X,
 } from "lucide-react";
 import { CsvTable } from "./components/CsvTable";
@@ -202,7 +203,7 @@ function App() {
   const [preferences, setPreferences] = useState<Preferences>(loadPreferences);
   const [query, setQuery] = useState("");
   const [workerQuery, setWorkerQuery] = useState("");
-  const [filterColumn, setFilterColumn] = useState("all");
+  const [filterColumn, setFilterColumn] = useState<string | null>(null);
   const [visibleCsvRows, setVisibleCsvRows] = useState(CSV_PAGE_SIZE);
   const [csvView, setCsvView] = useState<CsvQueryPayload>({ rows: [], total: 0 });
   const [csvQueryPending, setCsvQueryPending] = useState(false);
@@ -332,7 +333,7 @@ function App() {
 
   const resetInspectionState = () => {
     clearSearch();
-    setFilterColumn("all");
+    setFilterColumn(null);
     setSort(null);
     setConversion(null);
     setCopyState("idle");
@@ -618,39 +619,23 @@ function App() {
 
   return (
     <main className={document ? "document-open" : ""}>
-      <div className="ambient" aria-hidden="true">
-        <i className="orbit orbit-one" />
-        <i className="orbit orbit-two"><span /></i>
-      </div>
       <header className="topbar">
         <a href={document ? "#workspace" : "#top"} className="brand" aria-label="Clyvora Lens home">
-          <img src="/favicon.png" alt="" width="32" height="32" decoding="async" />
+          <img src="/app-icon.webp" alt="" width="32" height="32" decoding="async" />
           <span>Lens</span>
         </a>
         <nav className="site-nav" aria-label="Clyvora sites">
-          <a href="https://www.convert.clyvora.tech">Clyvora Convert</a>
+          <a href="https://www.convert.clyvora.tech">Convert</a>
           <a href="https://www.clyvora.tech">Clyvora</a>
+          <ThemeToggle />
         </nav>
       </header>
 
       {!document && <section id="top" className="intro" aria-labelledby="page-title">
-        <div>
-          <p className="eyebrow">
-            <Sparkles size={15} aria-hidden="true" /> Local file workbench
-          </p>
-          <h1 id="page-title">
-            Look closer at
-            <br />
-            <em>your data.</em>
-          </h1>
-          <p className="lede">
-            Open, inspect, search, and convert JSON or CSV—entirely in your
-            browser.
-          </p>
-          <p className="local-promise">
-            <ShieldCheck size={15} aria-hidden="true" /> Your files never leave
-            this device.
-          </p>
+        <div className="entry-heading">
+          <img className="app-art" src="/app-icon.webp" alt="" width="160" height="160" />
+          <h1 id="page-title">Lens</h1>
+          <p className="lede">A closer look at your JSON and CSV.</p>
         </div>
         <div
           className={`drop-zone ${dragging ? "is-dragging" : ""}`}
@@ -734,7 +719,7 @@ function App() {
         </div>
       </section>}
 
-      <section
+      {(document || error || processing) && <section
         id="workspace"
         className={`workspace ${document ? "has-document" : ""}`}
         aria-labelledby="workspace-title"
@@ -773,7 +758,7 @@ function App() {
         {processing && (
           <div className="processing-banner" role="status" aria-live="polite">
             <span className="processing-spinner" aria-hidden="true" />
-            <span>{processing}</span>
+            <MorphText>{processing}</MorphText>
             <small>Heavy work is running away from the interface.</small>
             <button type="button" className="quiet" onClick={closeDocument}>
               Cancel
@@ -920,12 +905,12 @@ function App() {
                 <label className="select-box">
                   <span className="sr-only">Filter column</span>
                   <select
-                    value={filterColumn}
-                    onChange={(e) => setFilterColumn(e.target.value)}
+                    value={JSON.stringify(filterColumn)}
+                    onChange={(e) => setFilterColumn(JSON.parse(e.target.value))}
                   >
-                    <option value="all">All columns</option>
+                    <option value="null">All columns</option>
                     {document.columns?.map((column) => (
-                      <option key={column} value={column}>
+                      <option key={column} value={JSON.stringify(column)}>
                         {column}
                       </option>
                     ))}
@@ -985,11 +970,11 @@ function App() {
                     ) : (
                       <Clipboard size={15} />
                     )}{" "}
-                    {copyState === "copied"
+                    <MorphText>{copyState === "copied"
                       ? "Copied"
                       : copyState === "failed"
                         ? "Copy failed"
-                        : "Copy"}
+                        : "Copy"}</MorphText>
                   </button>
                 )}
                 <button
@@ -1073,44 +1058,6 @@ function App() {
             )}
           </>
         )}
-      </section>
-
-      {!document && <section className="product-details" aria-labelledby="lens-details-title">
-        <div className="product-details-intro">
-          <p className="eyebrow">Built for structured data</p>
-          <h2 id="lens-details-title">A private JSON and CSV workbench.</h2>
-          <p>Clyvora Lens combines a JSON viewer, CSV inspector, search tools, data profiling, and two-way conversion without sending selected files to a backend.</p>
-        </div>
-        <div className="product-details-grid">
-          <article>
-            <h3>Inspect JSON clearly</h3>
-            <p>Expand nested objects and arrays, search keys or values, copy paths and subtrees, or switch to formatted raw JSON.</p>
-          </article>
-          <article>
-            <h3>Explore CSV data</h3>
-            <p>Search, filter, profile, and sort CSV rows while preserving quoted fields, escaped delimiters, and embedded newlines.</p>
-          </article>
-          <article>
-            <h3>Convert locally</h3>
-            <p>Convert CSV to typed JSON or select a table-shaped array inside JSON and export it as configurable CSV.</p>
-          </article>
-        </div>
-        <p className="product-formats"><strong>Supported data formats:</strong> JSON, CSV, and pasted structured text.</p>
-        <div className="product-faq" aria-labelledby="lens-faq-title">
-          <h3 id="lens-faq-title">Questions about Clyvora Lens</h3>
-          <details>
-            <summary>Are JSON or CSV files uploaded?</summary>
-            <p>No. Selected file contents are parsed, searched, and converted on your device. Lens has no backend or cloud file library.</p>
-          </details>
-          <details>
-            <summary>Can Lens handle large files?</summary>
-            <p>Parsing runs away from the main interface. Lens limits files to 25 MB on desktop-class devices and 10 MB on mobile or lower-memory devices to prevent a browser tab crash.</p>
-          </details>
-          <details>
-            <summary>Is converted output guaranteed to be identical?</summary>
-            <p>No. JSON and CSV represent data differently. Lens previews conversions and exposes output controls, but beta users should keep their source file and verify important results.</p>
-          </details>
-        </div>
       </section>}
 
       <footer>
@@ -1126,7 +1073,7 @@ function App() {
             <ExternalLink size={14} aria-hidden="true" /> GitHub
           </a>
         </div>
-        <span>Private by design · No uploads · No tracking</span>
+        <span>Files stay on this device.</span>
       </footer>
 
       {conversion && (
@@ -1139,7 +1086,7 @@ function App() {
         >
           <section
             ref={dialogRef}
-            className="modal"
+            className="modal export-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="conversion-title"
@@ -1160,32 +1107,20 @@ function App() {
               </button>
             </div>
             <p className="modal-note">
-              Your original file is unchanged. Download only when this preview
-              looks right.
+              Preview your export. Your original file stays unchanged.
             </p>
+            <div className="export-body">
             <div className="conversion-options" aria-label="Conversion options">
               <div className="conversion-options-title">
                 <Settings2 size={15} aria-hidden="true" />
-                <span>Export options</span>
+                <span>Export settings</span>
                 <small>Saved on this device</small>
               </div>
               {document?.format === "csv" ? (
                 <>
-                  <label>
-                    <span>Rows</span>
-                    <select
-                      value={preferences.exportScope}
-                      disabled={conversionBusy}
-                      onChange={(event) =>
-                        updateConversionPreference({
-                          exportScope: event.target.value as "all" | "filtered",
-                        })
-                      }
-                    >
-                      <option value="all">All rows ({document.itemCount})</option>
-                      <option value="filtered">Current view ({csvView.total})</option>
-                    </select>
-                  </label>
+                  <ChoiceGroup label="Rows" value={preferences.exportScope} disabled={conversionBusy}
+                    choices={[{ value: 'all', label: 'All rows', description: String(document.itemCount) }, { value: 'filtered', label: 'Current view', description: String(csvView.total) }]}
+                    onChange={value => updateConversionPreference({ exportScope: value as 'all' | 'filtered' })} />
                   <label>
                     <span>Value types</span>
                     <select
@@ -1299,6 +1234,7 @@ function App() {
                 </>
               )}
             </div>
+            <div className="export-preview">
             <div className="conversion-diagnostics" aria-label="Conversion summary">
               {conversion.diagnostics.map((item) => (
                 <span key={item.label}>
@@ -1322,6 +1258,8 @@ function App() {
                 Updating preview…
               </div>
             )}
+            </div>
+            </div>
             <div className="modal-actions">
               <button
                 type="button"
@@ -1338,8 +1276,7 @@ function App() {
                   downloadBlob(conversion.blob, conversion.name)
                 }
               >
-                <Download size={16} /> Download{" "}
-                {conversion.format.toUpperCase()}
+                <Download size={16} /><MorphText>{conversionBusy ? "Updating preview…" : `Download ${conversion.format.toUpperCase()}`}</MorphText>
               </button>
             </div>
           </section>
@@ -1398,7 +1335,7 @@ function App() {
                 disabled={!pasteValue.trim()}
                 onClick={() => void inspectPastedData()}
               >
-                Inspect data
+                <MorphText>{pasteValue.trim() ? "Inspect data" : "Paste data to continue"}</MorphText>
               </button>
             </div>
           </section>

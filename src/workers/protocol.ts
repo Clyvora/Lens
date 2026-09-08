@@ -55,7 +55,7 @@ export type WorkerRequest =
       id: number;
       type: "queryCsv";
       query: string;
-      column: string;
+      column: string | null;
       sort: SortSpec | null;
       limit: number;
     }
@@ -66,7 +66,7 @@ export type WorkerRequest =
       sourceFormat: "json" | "csv";
       exportScope: "all" | "filtered";
       query: string;
-      column: string;
+      column: string | null;
       sort: SortSpec | null;
       delimiter: CsvDelimiter;
       newline: CsvLineEnding;

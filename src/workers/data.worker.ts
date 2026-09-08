@@ -30,7 +30,7 @@ let jsonSearchIndex: Array<{
   haystack: string;
   ancestors: string[];
 }> = [];
-let csvSearchCache = new Map<string, string[]>();
+let csvSearchCache = new Map<string | null, string[]>();
 let queryCacheKey = "";
 let queryCacheRows: Array<Record<string, string>> = [];
 const CONVERSION_PREVIEW_LIMIT = 200_000;
@@ -57,7 +57,7 @@ function indexJsonTableSources(value: JsonValue) {
         labels.set(path, path === "$" ? "Root array" : path);
         for (const item of rows) {
           for (const [key, child] of Object.entries(item)) {
-            if (child && typeof child === "object") visit(child, `${path}[].${key}`);
+            if (child && typeof child === "object") visit(child, childPath(`${path}[]`, key, false));
           }
         }
       }
@@ -158,12 +158,12 @@ function buildJsonSearchIndex(value: JsonValue) {
   return index;
 }
 
-function csvSearchValues(column: string) {
+function csvSearchValues(column: string | null) {
   if (!currentCsv) throw new Error("No CSV file is open.");
   const cached = csvSearchCache.get(column);
   if (cached) return cached;
   const values = currentCsv.rows.map((row) =>
-    column === "all"
+    column === null
       ? currentCsv!.columns.map((name) => row[name] ?? "").join("\u0000").toLowerCase()
       : String(row[column] ?? "").toLowerCase(),
   );
@@ -171,7 +171,7 @@ function csvSearchValues(column: string) {
   return values;
 }
 
-function getCsvRows(query: string, column: string, sort: SortSpec | null) {
+function getCsvRows(query: string, column: string | null, sort: SortSpec | null) {
   if (!currentCsv) throw new Error("No CSV file is open.");
   const normalizedQuery = query.trim().toLowerCase();
   const key = JSON.stringify([normalizedQuery, column, sort]);
@@ -204,7 +204,7 @@ function getCsvRows(query: string, column: string, sort: SortSpec | null) {
 
 function queryCsv(
   query: string,
-  column: string,
+  column: string | null,
   sort: SortSpec | null,
   limit: number,
 ): CsvQueryPayload {

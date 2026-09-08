@@ -104,7 +104,7 @@ function looksLikeCsv(content: string): boolean {
   const rows = result.data
   if (rows.length === 0) return false
 
-  const width = Math.max(...rows.map((row) => row.length))
+  const width = rows.reduce((maximum, row) => Math.max(maximum, row.length), 0)
   if (width < 2) return false
 
   // A single delimiter can be prose punctuation. Multiple records, or at
@@ -259,20 +259,25 @@ export function parseCsv(content: string): Result<CsvDocument> {
     }
   }
 
-  const parsed = Papa.parse<Record<string, string>>(content, {
-    header: true,
+  // Parse positional cells: Papa's header dictionaries cannot preserve __proto__.
+  const parsed = Papa.parse<string[]>(content, {
     skipEmptyLines: 'greedy',
-    transformHeader: (header) => header.trim(),
   })
 
-  const columns = parsed.meta.fields ?? []
   const errors = parsed.errors.map(csvIssue)
-  for (const [renamed, original] of Object.entries(parsed.meta.renamedHeaders ?? {})) {
-    errors.push({
-      message: `Duplicate header “${original}” was renamed to “${renamed}”.`,
-      code: 'DUPLICATE_HEADER',
-    })
-  }
+  const headers = (parsed.data.shift() ?? []).map((header) => header.trim())
+  const reserved = new Set(headers)
+  const seen = new Set<string>()
+  const columns = headers.map((original) => {
+    let name = original
+    let suffix = 1
+    if (seen.has(name)) {
+      do { name = `${original}_${suffix++}` } while (reserved.has(name) || seen.has(name))
+      errors.push({ message: `Duplicate header “${original}” was renamed to “${name}”.`, code: 'DUPLICATE_HEADER' })
+    }
+    seen.add(name)
+    return name
+  })
   const fatalError = parsed.errors.find((error) => error.type === 'Quotes')
 
   if (fatalError) {
@@ -286,10 +291,14 @@ export function parseCsv(content: string): Result<CsvDocument> {
     }
   }
 
-  const rows = parsed.data.map((row) => {
-    const normalized: Record<string, string> = {}
-    for (const column of columns) {
-      const value = row[column]
+  const rows = parsed.data.map((row, index) => {
+    if (row.length !== columns.length) errors.push({
+      message: `Row ${index + 1} has ${row.length} fields; expected ${columns.length}.`,
+      row: index + 1, code: row.length > columns.length ? 'TooManyFields' : 'TooFewFields',
+    })
+    const normalized: Record<string, string> = Object.create(null)
+    for (const [index, column] of columns.entries()) {
+      const value = row[index]
       normalized[column] = value == null ? '' : String(value)
     }
     return normalized
@@ -324,7 +333,7 @@ export function csvToJson(
   options: CsvToJsonOptions = {},
 ): JsonObject[] {
   return csvData.rows.map((row) => {
-    const item: JsonObject = {}
+    const item: JsonObject = Object.create(null)
     for (const column of csvData.columns) {
       const value = typedCsvCell(row[column] ?? '', options)
       if (value !== OMIT_CELL) item[column] = value
@@ -355,7 +364,7 @@ function assignUnique(target: JsonObject, key: string, value: JsonValue) {
   if (Object.hasOwn(target, key)) {
     throw new Error(`Flattening creates the duplicate column “${key}”. Rename the conflicting JSON key or keep nested values as JSON text.`)
   }
-  target[key] = value
+  Object.defineProperty(target, key, { value, enumerable: true, writable: true, configurable: true })
 }
 
 function flattenJsonObject(value: JsonObject, prefix = ''): JsonObject {
@@ -450,13 +459,13 @@ export function jsonToCsv(jsonValue: JsonValue, options: JsonToCsvOptions = {}):
   }
   const columns = Array.from(new Set(objects.flatMap((item) => Object.keys(item))))
   const rows = objects.map((item) =>
-    columns.map((column) => csvCell(item[column], options.protectFormulas)),
+    columns.map((column) => csvCell(Object.hasOwn(item, column) ? item[column] : undefined, options.protectFormulas)),
   )
 
   return {
     ok: true,
     data: Papa.unparse(
-      { fields: columns, data: rows },
+      { fields: columns.map((column) => String(csvCell(column, options.protectFormulas))), data: rows },
       { delimiter: options.delimiter ?? ',', newline: options.newline ?? '\n' },
     ),
   }
