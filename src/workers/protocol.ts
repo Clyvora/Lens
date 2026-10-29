@@ -50,7 +50,13 @@ export interface ConversionPayload {
 }
 
 export type WorkerRequest =
-  | { id: number; type: "parse"; filename: string; content: string | ArrayBuffer }
+  | {
+      id: number;
+      type: "parse";
+      filename: string;
+      content: string | ArrayBuffer;
+      format?: "auto" | "json" | "csv";
+    }
   | {
       id: number;
       type: "queryCsv";
@@ -83,4 +89,5 @@ export interface WorkerResponse<T = unknown> {
   ok: boolean;
   data?: T;
   error?: string;
+  issue?: ParseIssue;
 }

@@ -24,14 +24,20 @@ export class DataWorkerClient {
     this.worker.addEventListener("error", this.handleError);
   }
 
-  request<T>(request: RequestWithoutId, transfer: Transferable[] = []): Promise<T> {
+  request<T>(
+    request: RequestWithoutId,
+    transfer: Transferable[] = [],
+  ): Promise<T> {
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, {
         resolve: resolve as (value: unknown) => void,
         reject,
       });
-      this.worker.postMessage({ ...request, id } satisfies WorkerRequest, transfer);
+      this.worker.postMessage(
+        { ...request, id } satisfies WorkerRequest,
+        transfer,
+      );
     });
   }
 
@@ -51,12 +57,19 @@ export class DataWorkerClient {
     if (!pending) return;
     this.pending.delete(response.id);
     if (response.ok) pending.resolve(response.data);
-    else pending.reject(new Error(response.error ?? "Local processing failed."));
+    else
+      pending.reject(
+        Object.assign(new Error(response.error ?? "Local processing failed."), {
+          issue: response.issue,
+        }),
+      );
   };
 
   private handleError = () => {
     for (const pending of this.pending.values()) {
-      pending.reject(new Error("The local processing worker stopped unexpectedly."));
+      pending.reject(
+        new Error("The local processing worker stopped unexpectedly."),
+      );
     }
     this.pending.clear();
   };

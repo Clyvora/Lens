@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Lens — data in focus</title>
+  <path d="M48 256C92 164 162 104 256 104s164 60 208 152h-58c-36-62-86-102-150-102S142 194 106 256H48Z" fill="#FFFFFF"/>
+  <path d="M464 256C420 348 350 408 256 408S92 348 48 256h58c36 62 86 102 150 102s114-40 150-102h58Z" fill="#FFFFFF"/>
+  <rect x="188" y="188" width="58" height="58" rx="12" fill="#FFFFFF"/>
+  <rect x="266" y="188" width="58" height="58" rx="12" fill="#FFFFFF"/>
+  <rect x="188" y="266" width="58" height="58" rx="12" fill="#FFFFFF"/>
+  <rect x="266" y="266" width="58" height="58" rx="12" fill="#FFFFFF"/>
+</svg>

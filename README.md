@@ -71,6 +71,6 @@ Bug reports, focused improvements, accessibility fixes, and performance work are
 
 Clyvora Lens's original source code is source-available under the [PolyForm Shield License 1.0.0](LICENSE). Use, modification, and distribution are permitted except for providing a product that competes with Clyvora Lens or another product Clyvora provides using this software. This is not an OSI-approved open-source license. Versions previously published under MIT remain available under the MIT terms that accompanied those versions.
 
-## Clyvora appearance
+## Lens workspace
 
-The interface matches ClyvoraMain: neutral surfaces, dimensional app artwork, dark by default, and a complete light theme. The header theme control saves `clyvora-theme` locally for this site. Theme preferences are independent across subdomains. Colors and responsive presentation live in `src/clyvora-theme.css`; processing behavior remains in the existing tool components. Entrance and hover animations respect reduced-motion preferences.
+Lens uses a black and charcoal file-browser workspace with green selection and export accents. File actions stay in the sidebar, JSON fields can be selected for plain-language details and copying, and conversion opens a separate preview. The layout adapts to narrow screens with a persistent export action. Fonts and icon assets are served locally. Presentation lives in `src/styles.css`; animations respect reduced-motion preferences.

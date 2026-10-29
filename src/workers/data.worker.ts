@@ -11,7 +11,7 @@ import {
   parseCsv,
   parseJson,
 } from "../lib";
-import type { CsvDocument, JsonValue } from "../lib";
+import type { CsvDocument, JsonValue, ParseIssue } from "../lib";
 import type {
   ConversionPayload,
   CsvQueryPayload,
@@ -50,14 +50,20 @@ function indexJsonTableSources(value: JsonValue) {
   const labels = new Map<string, string>();
   const visit = (node: JsonValue, path: string) => {
     if (Array.isArray(node)) {
-      if (node.every((item) => item !== null && typeof item === "object" && !Array.isArray(item))) {
+      if (
+        node.every(
+          (item) =>
+            item !== null && typeof item === "object" && !Array.isArray(item),
+        )
+      ) {
         const rows = node as Array<Record<string, JsonValue>>;
         const existing = jsonTableData.get(path) ?? [];
         jsonTableData.set(path, [...existing, ...rows]);
         labels.set(path, path === "$" ? "Root array" : path);
         for (const item of rows) {
           for (const [key, child] of Object.entries(item)) {
-            if (child && typeof child === "object") visit(child, childPath(`${path}[]`, key, false));
+            if (child && typeof child === "object")
+              visit(child, childPath(`${path}[]`, key, false));
           }
         }
       }
@@ -83,21 +89,31 @@ function indexJsonTableSources(value: JsonValue) {
 function parseDocument(
   filename: string,
   source: string | ArrayBuffer,
+  format?: "auto" | "json" | "csv",
 ): ParsedDocumentPayload {
-  const sourceSize = typeof source === "string" ? source.length : source.byteLength;
+  const sourceSize =
+    typeof source === "string" ? source.length : source.byteLength;
   if (sourceSize > MAX_SOURCE_BYTES) {
     throw new Error("This file is larger than Lens's 25 MB safety limit.");
   }
-  const content = typeof source === "string"
-    ? source
-    : new TextDecoder("utf-8").decode(source);
-  if (!content.trim()) throw new Error("This file is empty. Choose a JSON or CSV file with content.");
+  const content =
+    typeof source === "string"
+      ? source
+      : new TextDecoder("utf-8").decode(source);
+  if (!content.trim())
+    throw new Error(
+      "This file is empty. Choose a JSON or CSV file with content.",
+    );
   const detected = detectFormat(filename, content);
+  if (format && format !== "auto") detected.format = format;
   resetState();
 
   if (detected.format === "json") {
     const parsed = parseJson(content);
-    if (!parsed.ok) throw new Error(parsed.error.message);
+    if (!parsed.ok)
+      throw Object.assign(new Error(parsed.error.message), {
+        issue: parsed.error,
+      });
     currentJson = parsed.data;
     jsonSearchIndex = buildJsonSearchIndex(parsed.data);
     const jsonTableSources = indexJsonTableSources(parsed.data);
@@ -114,7 +130,10 @@ function parseDocument(
 
   if (detected.format === "csv") {
     const parsed = parseCsv(content.replace(/^\uFEFF/, ""));
-    if (!parsed.ok) throw new Error(parsed.error.message);
+    if (!parsed.ok)
+      throw Object.assign(new Error(parsed.error.message), {
+        issue: parsed.error,
+      });
     currentCsv = parsed.data;
     return {
       format: "csv",
@@ -129,7 +148,8 @@ function parseDocument(
 }
 
 function buildJsonSearchIndex(value: JsonValue) {
-  const index: Array<{ path: string; haystack: string; ancestors: string[] }> = [];
+  const index: Array<{ path: string; haystack: string; ancestors: string[] }> =
+    [];
   const visit = (
     key: string,
     node: JsonValue,
@@ -145,12 +165,10 @@ function buildJsonSearchIndex(value: JsonValue) {
     if (node && typeof node === "object") {
       const array = Array.isArray(node);
       for (const [childKey, child] of Object.entries(node)) {
-        visit(
-          childKey,
-          child,
-          childPath(path, childKey, array),
-          [...ancestors, path],
-        );
+        visit(childKey, child, childPath(path, childKey, array), [
+          ...ancestors,
+          path,
+        ]);
       }
     }
   };
@@ -164,14 +182,21 @@ function csvSearchValues(column: string | null) {
   if (cached) return cached;
   const values = currentCsv.rows.map((row) =>
     column === null
-      ? currentCsv!.columns.map((name) => row[name] ?? "").join("\u0000").toLowerCase()
+      ? currentCsv!.columns
+          .map((name) => row[name] ?? "")
+          .join("\u0000")
+          .toLowerCase()
       : String(row[column] ?? "").toLowerCase(),
   );
   csvSearchCache.set(column, values);
   return values;
 }
 
-function getCsvRows(query: string, column: string | null, sort: SortSpec | null) {
+function getCsvRows(
+  query: string,
+  column: string | null,
+  sort: SortSpec | null,
+) {
   if (!currentCsv) throw new Error("No CSV file is open.");
   const normalizedQuery = query.trim().toLowerCase();
   const key = JSON.stringify([normalizedQuery, column, sort]);
@@ -238,12 +263,15 @@ function searchJson(query: string): JsonSearchPayload {
   };
 }
 
-function convert(request: Extract<WorkerRequest, { type: "convert" }>): ConversionPayload {
+function convert(
+  request: Extract<WorkerRequest, { type: "convert" }>,
+): ConversionPayload {
   if (request.sourceFormat === "csv") {
     if (!currentCsv) throw new Error("No CSV file is open.");
-    const rows = request.exportScope === "filtered"
-      ? getCsvRows(request.query, request.column, request.sort)
-      : currentCsv.rows;
+    const rows =
+      request.exportScope === "filtered"
+        ? getCsvRows(request.query, request.column, request.sort)
+        : currentCsv.rows;
     const convertedRows = csvToJson(
       { ...currentCsv, rows },
       {
@@ -253,18 +281,37 @@ function convert(request: Extract<WorkerRequest, { type: "convert" }>): Conversi
     );
     const text = formatJson(convertedRows);
     return makeConversionPayload(text, "json", [
-        { label: "Rows", value: rows.length.toLocaleString() },
-        { label: "Columns", value: currentCsv.columns.length.toLocaleString() },
-        { label: "Source", value: request.exportScope === "filtered" ? "Current view" : "Complete file" },
-        { label: "Value types", value: request.inferCsvTypes ? "Numbers and booleans inferred" : "All text" },
-        { label: "Empty cells", value: request.csvEmptyMode === "null" ? "null" : request.csvEmptyMode === "omit" ? "Omitted" : "Empty text" },
-      ]);
+      { label: "Rows", value: rows.length.toLocaleString() },
+      { label: "Columns", value: currentCsv.columns.length.toLocaleString() },
+      {
+        label: "Source",
+        value:
+          request.exportScope === "filtered" ? "Current view" : "Complete file",
+      },
+      {
+        label: "Value types",
+        value: request.inferCsvTypes
+          ? "Numbers and booleans inferred"
+          : "All text",
+      },
+      {
+        label: "Empty cells",
+        value:
+          request.csvEmptyMode === "null"
+            ? "null"
+            : request.csvEmptyMode === "omit"
+              ? "Omitted"
+              : "Empty text",
+      },
+    ]);
   }
 
   if (currentJson === undefined) throw new Error("No JSON file is open.");
   const tableValue = jsonTableData.get(request.jsonTableSource);
   if (!tableValue) {
-    throw new Error("No table-shaped array was found. Choose a JSON array containing objects before converting to CSV.");
+    throw new Error(
+      "No table-shaped array was found. Choose a JSON array containing objects before converting to CSV.",
+    );
   }
   const converted = jsonToCsv(tableValue, {
     delimiter: request.delimiter,
@@ -275,21 +322,27 @@ function convert(request: Extract<WorkerRequest, { type: "convert" }>): Conversi
   if (!converted.ok) throw new Error(converted.error.message);
   const parsedOutput = parseCsv(converted.data);
   const columns = parsedOutput.ok ? parsedOutput.data.columns.length : 0;
-  const rows = parsedOutput.ok ? parsedOutput.data.rows.length : tableValue.length;
+  const rows = parsedOutput.ok
+    ? parsedOutput.data.rows.length
+    : tableValue.length;
   return makeConversionPayload(converted.data, "csv", [
-      { label: "Rows", value: rows.toLocaleString() },
-      { label: "Columns", value: columns.toLocaleString() },
-      {
-        label: "Nested data",
-        value: request.nestedMode === "expand"
+    { label: "Rows", value: rows.toLocaleString() },
+    { label: "Columns", value: columns.toLocaleString() },
+    {
+      label: "Nested data",
+      value:
+        request.nestedMode === "expand"
           ? "Arrays expanded"
           : request.nestedMode === "flatten"
             ? "Flattened paths"
             : "JSON text",
-      },
-      { label: "Table source", value: request.jsonTableSource },
-      { label: "Formula safety", value: request.protectFormulas ? "Protected" : "Unchanged" },
-    ]);
+    },
+    { label: "Table source", value: request.jsonTableSource },
+    {
+      label: "Formula safety",
+      value: request.protectFormulas ? "Protected" : "Unchanged",
+    },
+  ]);
 }
 
 function makeConversionPayload(
@@ -300,11 +353,12 @@ function makeConversionPayload(
   const blob = new Blob([text], {
     type: format === "json" ? "application/json" : "text/csv",
   });
-  const size = blob.size < 1024
-    ? `${blob.size} B`
-    : blob.size < 1024 ** 2
-      ? `${(blob.size / 1024).toFixed(1)} KB`
-      : `${(blob.size / 1024 ** 2).toFixed(1)} MB`;
+  const size =
+    blob.size < 1024
+      ? `${blob.size} B`
+      : blob.size < 1024 ** 2
+        ? `${(blob.size / 1024).toFixed(1)} KB`
+        : `${(blob.size / 1024 ** 2).toFixed(1)} MB`;
   const truncated = text.length > CONVERSION_PREVIEW_LIMIT;
   return {
     preview: truncated
@@ -317,37 +371,53 @@ function makeConversionPayload(
   };
 }
 
-const workerScope: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+const workerScope: DedicatedWorkerGlobalScope =
+  self as unknown as DedicatedWorkerGlobalScope;
 
-workerScope.addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
-  const request = event.data;
-  const respond = (response: WorkerResponse) => workerScope.postMessage(response);
-  try {
-    let data: unknown;
-    switch (request.type) {
-      case "parse":
-        data = parseDocument(request.filename, request.content);
-        break;
-      case "queryCsv":
-        data = queryCsv(request.query, request.column, request.sort, request.limit);
-        break;
-      case "searchJson":
-        data = searchJson(request.query);
-        break;
-      case "convert":
-        data = convert(request);
-        break;
-      case "clear":
-        resetState();
-        data = undefined;
-        break;
+workerScope.addEventListener(
+  "message",
+  (event: MessageEvent<WorkerRequest>) => {
+    const request = event.data;
+    const respond = (response: WorkerResponse) =>
+      workerScope.postMessage(response);
+    try {
+      let data: unknown;
+      switch (request.type) {
+        case "parse":
+          data = parseDocument(
+            request.filename,
+            request.content,
+            request.format,
+          );
+          break;
+        case "queryCsv":
+          data = queryCsv(
+            request.query,
+            request.column,
+            request.sort,
+            request.limit,
+          );
+          break;
+        case "searchJson":
+          data = searchJson(request.query);
+          break;
+        case "convert":
+          data = convert(request);
+          break;
+        case "clear":
+          resetState();
+          data = undefined;
+          break;
+      }
+      respond({ id: request.id, ok: true, data });
+    } catch (error) {
+      respond({
+        id: request.id,
+        ok: false,
+        error:
+          error instanceof Error ? error.message : "Local processing failed.",
+        issue: (error as { issue?: ParseIssue }).issue,
+      });
     }
-    respond({ id: request.id, ok: true, data });
-  } catch (error) {
-    respond({
-      id: request.id,
-      ok: false,
-      error: error instanceof Error ? error.message : "Local processing failed.",
-    });
-  }
-});
+  },
+);

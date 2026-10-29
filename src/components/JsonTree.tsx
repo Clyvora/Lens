@@ -2,12 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronRight, Copy } from "lucide-react";
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 interface JsonTreeProps {
   value: JsonValue;
@@ -15,6 +10,8 @@ interface JsonTreeProps {
   showPaths?: boolean;
   exactPaths?: ReadonlySet<string>;
   branchPaths?: ReadonlySet<string>;
+  onSelect?: (path: string, value: JsonValue) => void;
+  selectedPath?: string;
 }
 
 const BRANCH_PAGE_SIZE = 100;
@@ -53,6 +50,8 @@ function TreeNode({
   branchPaths,
   copiedToken,
   onCopy,
+  onSelect,
+  selectedPath,
 }: {
   name: string;
   value: JsonValue;
@@ -64,6 +63,8 @@ function TreeNode({
   branchPaths: ReadonlySet<string>;
   copiedToken: string;
   onCopy: CopyNode;
+  onSelect?: (path: string, value: JsonValue) => void;
+  selectedPath?: string;
 }) {
   const branch = value !== null && typeof value === "object";
   const isArray = Array.isArray(value);
@@ -87,12 +88,18 @@ function TreeNode({
     return (
       <div
         role="treeitem"
-        aria-selected={ownMatch}
-        className={`tree-row ${ownMatch ? "is-match" : ""}`}
+        aria-selected={selectedPath === path}
+        className={`tree-row ${ownMatch ? "is-match" : ""} ${selectedPath === path ? "is-selected" : ""}`}
         style={{ "--depth": depth } as React.CSSProperties}
       >
         <span className="tree-spacer" />
-        <span className="json-key">{name}</span>
+        <button
+          className="json-key select-node"
+          onClick={() => onSelect?.(path, value)}
+          aria-label={`Inspect ${path}`}
+        >
+          {name}
+        </button>
         <span className="json-punctuation">: </span>
         <Leaf value={value} />
         {showPaths && <span className="json-path">{path}</span>}
@@ -102,7 +109,11 @@ function TreeNode({
             onClick={() => onCopy(path, `${path}:path`, "Path")}
             aria-label={`Copy path ${path}`}
           >
-            {copiedToken === `${path}:path` ? <Check size={12} /> : <Copy size={12} />}
+            {copiedToken === `${path}:path` ? (
+              <Check size={12} />
+            ) : (
+              <Copy size={12} />
+            )}
             Path
           </button>
           <button
@@ -116,7 +127,11 @@ function TreeNode({
             }
             aria-label={`Copy value at ${path}`}
           >
-            {copiedToken === `${path}:value` ? <Check size={12} /> : <Copy size={12} />}
+            {copiedToken === `${path}:value` ? (
+              <Check size={12} />
+            ) : (
+              <Copy size={12} />
+            )}
             Value
           </button>
         </span>
@@ -136,12 +151,13 @@ function TreeNode({
     const keys = isArray
       ? Array.from({ length: entryCount }, (_, index) => String(index))
       : objectKeys;
-    const matchingKeys = searchActive && !ownMatch
-      ? keys.filter((key) => {
-          const nextPath = makeChildPath(path, key, isArray);
-          return exactPaths.has(nextPath) || branchPaths.has(nextPath);
-        })
-      : keys;
+    const matchingKeys =
+      searchActive && !ownMatch
+        ? keys.filter((key) => {
+            const nextPath = makeChildPath(path, key, isArray);
+            return exactPaths.has(nextPath) || branchPaths.has(nextPath);
+          })
+        : keys;
     matchingCount = matchingKeys.length;
     visibleKeys = matchingKeys.slice(0, visibleCount);
   }
@@ -149,11 +165,11 @@ function TreeNode({
     <div
       role="treeitem"
       aria-expanded={open}
-      aria-selected={ownMatch}
+      aria-selected={selectedPath === path}
       className={`tree-branch ${descendantMatch && search ? "has-match" : ""}`}
     >
       <div
-        className={`tree-row ${ownMatch ? "is-match" : ""}`}
+        className={`tree-row ${ownMatch ? "is-match" : ""} ${selectedPath === path ? "is-selected" : ""}`}
         style={{ "--depth": depth } as React.CSSProperties}
       >
         <button
@@ -165,7 +181,13 @@ function TreeNode({
         >
           <ChevronRight size={14} aria-hidden="true" />
         </button>
-        <span className="json-key">{name}</span>
+        <button
+          className="json-key select-node"
+          onClick={() => onSelect?.(path, value)}
+          aria-label={`Inspect ${path}`}
+        >
+          {name}
+        </button>
         <span className="json-punctuation">: {isArray ? "[" : "{"}</span>
         <span className="tree-summary">
           {entryCount} {isArray ? "items" : "keys"}
@@ -177,21 +199,25 @@ function TreeNode({
             onClick={() => onCopy(path, `${path}:path`, "Path")}
             aria-label={`Copy path ${path}`}
           >
-            {copiedToken === `${path}:path` ? <Check size={12} /> : <Copy size={12} />}
+            {copiedToken === `${path}:path` ? (
+              <Check size={12} />
+            ) : (
+              <Copy size={12} />
+            )}
             Path
           </button>
           <button
             type="button"
             onClick={() =>
-              onCopy(
-                JSON.stringify(value, null, 2),
-                `${path}:value`,
-                "Subtree",
-              )
+              onCopy(JSON.stringify(value, null, 2), `${path}:value`, "Subtree")
             }
             aria-label={`Copy JSON subtree at ${path}`}
           >
-            {copiedToken === `${path}:value` ? <Check size={12} /> : <Copy size={12} />}
+            {copiedToken === `${path}:value` ? (
+              <Check size={12} />
+            ) : (
+              <Copy size={12} />
+            )}
             Subtree
           </button>
         </span>
@@ -216,6 +242,8 @@ function TreeNode({
                 branchPaths={branchPaths}
                 copiedToken={copiedToken}
                 onCopy={onCopy}
+                onSelect={onSelect}
+                selectedPath={selectedPath}
               />
             );
           })}
@@ -231,7 +259,8 @@ function TreeNode({
                   setVisibleCount((count) => count + BRANCH_PAGE_SIZE)
                 }
               >
-                Show {Math.min(BRANCH_PAGE_SIZE, matchingCount - visibleCount)} more
+                Show {Math.min(BRANCH_PAGE_SIZE, matchingCount - visibleCount)}{" "}
+                more
                 <span>{matchingCount - visibleCount} remaining</span>
               </button>
             </div>
@@ -254,6 +283,8 @@ export const JsonTree = memo(function JsonTree({
   showPaths = false,
   exactPaths = EMPTY_PATHS,
   branchPaths = EMPTY_PATHS,
+  onSelect,
+  selectedPath,
 }: JsonTreeProps) {
   const [copiedToken, setCopiedToken] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
@@ -296,6 +327,8 @@ export const JsonTree = memo(function JsonTree({
         branchPaths={branchPaths}
         copiedToken={copiedToken}
         onCopy={copyNode}
+        onSelect={onSelect}
+        selectedPath={selectedPath}
       />
       <span className="sr-only" aria-live="polite">
         {copyMessage}

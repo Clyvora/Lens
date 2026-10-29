@@ -5,7 +5,7 @@ export function ThemeToggle() {
   function toggle() {
     const next = theme === 'dark' ? 'light' : 'dark'
     globalThis.document.documentElement.dataset.theme = next
-    globalThis.document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'dark' ? '#151515' : '#fafafa')
+    globalThis.document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'dark' ? '#101719' : '#f3f6f5')
     try { localStorage.setItem('clyvora-theme', next) } catch { /* Theme remains available when storage is blocked. */ }
     setTheme(next)
   }
